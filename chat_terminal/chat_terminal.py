@@ -1,52 +1,102 @@
 import subprocess
 import os
 import re
+import requests
+import json
 
 settings = {
     "text_generation": {
         "endpoint": "local-llama",
-        "config": {
-            "main": "../llama.cpp/main",
-            "model": "../models/llama-2-13b-chat.Q4_0.gguf",
+        "configs": {
+            "server_url": "http://127.0.0.1:40080",
             "prompt": "../prompts/chat-terminal.txt",
+            "user": "User",
+            "agent": "Alice",
+            "options": {
+                "temperature": 0.75,
+                "top_k": 40,
+                "top_p": 0.9,
+                "n_predict": 4096,
+                "stop": ["[INST]", "User:"],
+                "stream": True,
+            }
         },
     },
 }
 
-def llama_text_generation(settings):
-    text_generation_cfg = settings['text_generation']['config']
+class LLamaTextGeneration:
+    def __init__(self, settings):
+        self.configs = settings['text_generation']['configs']
+        self.user = self.configs['user']
+        self.agent = self.configs['agent']
 
-    master, slave = os.openpty()
+        with open(self.configs['prompt']) as f:
+            lines = f.readlines()
+        self.prompt = ''.join(lines).strip()
+        self.n_keep = self.tokenize(lines[0].strip())
 
-    process = subprocess.Popen([text_generation_cfg['main'], '-m', text_generation_cfg['model'], '-e', '-ngl', '50', '--no-mmap', '-c', '3072', '-b', '512', '-n', '4096', '--keep', '48', '--repeat_penalty', '1.0', '--color', '-i', '-r', 'User:', '--in-prefix', ' ', '--in-suffix', 'Alice:', '-f', text_generation_cfg['prompt']], stdin=slave, stdout=subprocess.PIPE)
-    os.set_blocking(process.stdout.fileno(), False)
-    os.close(slave)
+    def tokenize(self, content):
+        data = {
+            "content": content,
+        }
 
-    def get_output():
-        # Read the output of the subprocess
-        output = process.stdout.readline()
-        return output.decode()
+        res = requests.post(f"{self.configs['server_url']}/tokenize", json=data)
+        return len(json.loads(res.content)['tokens'])
 
-    def put_input(input):
-        input = input + '\n'
-        os.write(master, input.encode())
+    def chat(self, content, cb=None):
+        self.prompt += f"\n{self.user}: {content}\n{self.agent}:"
 
-    return get_output, put_input
+        req = {
+            **self.configs['options'],
+            "n_keep": self.n_keep,
+            "prompt": self.prompt,
+        }
+
+        # Creating a streaming connection with a POST request
+        reply = ''
+        with requests.post(f"{self.configs['server_url']}/completion", json=req, stream=True) as response:
+            # Processing streaming data in chunks
+            buffer = ""  # Buffer to accumulate streamed data
+            for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+                if chunk:
+                    buffer += chunk
+                    try:
+                        # Attempt to decode JSON from the accumulated buffer
+                        res = json.loads(buffer[6:])
+
+                        reply += res['content']
+                        cb(res)
+
+                        buffer = ""  # Clear the buffer after processing
+                    except json.JSONDecodeError:
+                        pass  # Incomplete JSON, continue accumulating data
+        reply = reply.strip()
+        self.prompt += f'{reply}'
+
+        return reply
+
+def exec_command(command):
+    process = subprocess.run(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return process
 
 def chat(settings):
-    get_output, put_input = llama_text_generation(settings)
-
-    def get_until_user():
-        while True:
-            out = get_output()
-            if len(out) > 0:
-                print(out, end='')
-            if re.fullmatch(r'User: ?', out):
-                break
+    text_gen = LLamaTextGeneration(settings)
 
     while True:
-        get_until_user()
-        query = input('')
-        put_input(query)
+        query = input('User: ')
+        print('Alice:', end='')
+
+        def streamResponse(res):
+            print(res['content'], end='')
+        reply = text_gen.chat(query, streamResponse)
+        reply = reply.strip('`')
+
+        confirm = input('Execute the command?(y/n) ')
+        if confirm.lower() == 'y':
+            process = exec_command(reply)
+            print('Stdout: ')
+            print(process.stdout.decode())
+            print('Stderr: ')
+            print(process.stderr.decode())
 
 chat(settings)
