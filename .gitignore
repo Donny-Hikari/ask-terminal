@@ -1,0 +1,5 @@
+.vscode
+llama.cpp
+models
+
+chat_terminal/*.log
