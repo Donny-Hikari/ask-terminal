@@ -17,7 +17,7 @@ settings = {
                 "top_k": 40,
                 "top_p": 0.9,
                 "n_predict": 4096,
-                "stop": ["[INST]", "User:"],
+                "stop": ["[INST]", "[User]:"],
                 "stream": True,
             }
         },
@@ -43,13 +43,14 @@ class LLamaTextGeneration:
         res = requests.post(f"{self.configs['server_url']}/tokenize", json=data)
         return len(json.loads(res.content)['tokens'])
 
-    def chat(self, content, cb=None):
-        self.prompt += f"\n{self.user}: {content}\n{self.agent}:"
+    def chat(self, req_role, content, res_role, stop=[], cb=None):
+        self.prompt += f"\n[{req_role}]: {content}\n[{res_role}]:"
 
         req = {
             **self.configs['options'],
             "n_keep": self.n_keep,
             "prompt": self.prompt,
+            "stop": stop + self.configs['options'].get('stop', []),
         }
 
         # Creating a streaming connection with a POST request
@@ -67,6 +68,9 @@ class LLamaTextGeneration:
                         reply += res['content']
                         cb(res)
 
+                        if res['stop']:
+                            break
+
                         buffer = ""  # Clear the buffer after processing
                     except json.JSONDecodeError:
                         pass  # Incomplete JSON, continue accumulating data
@@ -75,28 +79,57 @@ class LLamaTextGeneration:
 
         return reply
 
+    def query_command(self, query, cb=None):
+        return self.chat(
+            req_role=self.user,
+            content=query,
+            res_role='Command',
+            stop=["[Observation]:", "[{self.agent}]:"],
+            cb=cb,
+        )
+
+    def query_answer(self, observation, cb):
+        return self.chat(
+            req_role='Observation',
+            content=observation,
+            res_role=self.agent,
+            stop=["[Command]:", "[Observation]:"],
+            cb=cb,
+        )
+
 def exec_command(command):
-    process = subprocess.run(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return process
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    return process, stdout, stderr
 
 def chat(settings):
     text_gen = LLamaTextGeneration(settings)
 
     while True:
-        query = input('User: ')
-        print('Alice:', end='')
+        query = input('[User]: ')
+        print('[Command]:', end='')
 
         def streamResponse(res):
             print(res['content'], end='')
-        reply = text_gen.chat(query, streamResponse)
-        reply = reply.strip('`')
+        command = text_gen.query_command(query, cb=streamResponse)
+        command = command.strip('`')
+        print('')
 
         confirm = input('Execute the command?(y/n) ')
+        observation = "Illegal command"
         if confirm.lower() == 'y':
-            process = exec_command(reply)
-            print('Stdout: ')
-            print(process.stdout.decode())
-            print('Stderr: ')
-            print(process.stderr.decode())
+            process, stdout, stderr = exec_command(command)
+            observation = ""
+            if len(stdout):
+                observation = f"Stdout: {repr(stdout.decode().strip())}\n"
+            if len(stderr):
+                observation += f"Stderr: {repr(stderr.decode().strip())}"
+            observation = observation.strip()
+            observation = f'"""{observation}"""'
+        print(f'[Observation]: {observation}')
+
+        print('[Alice]:', end='')
+        reply = text_gen.query_answer(observation, cb=streamResponse)
+        print('')
 
 chat(settings)
