@@ -57,15 +57,8 @@ class OpenAITextCompletion:
     self.model_name = model_name
     self.logger = logger
     self.tokenizer = AutoTokenizer.from_pretrained('gpt2')
-    self.client = OpenAI()
+    self.client = OpenAI(api_key=api_key)
     self.initial_system_msg = initial_system_msg
-
-    if 'OPENAI_API_KEY' in os.environ:
-      self.client.api_key = os.environ['OPENAI_API_KEY']
-    elif api_key is not None:
-      self.client.api_key = api_key
-    else:
-      raise RuntimeError("API key missing for OpenAI enpoint")
 
   def tokenize(self, content):
     return self.tokenizer.tokenize(content)
@@ -93,11 +86,12 @@ class OpenAITextCompletion:
         for chunk in response:
             content = chunk.choices[0].delta.content
             stop = chunk.choices[0].finish_reason is not None
-            reply += content
+            if not stop:
+              reply += content
             if cb is not None:
               cb(content=content, stop=stop, res=chunk)
         break
-      except openai.error.RateLimitError as e:
+      except openai.RateLimitError as e:
         if n_retries == 1:
           if self.logger:
             self.logger.warning("Encounter rate limit.")

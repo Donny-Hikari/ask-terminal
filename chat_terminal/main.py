@@ -2,7 +2,7 @@ import subprocess
 import os
 import re
 import requests
-import json
+import yaml
 import argparse
 import sys
 import logging
@@ -85,7 +85,8 @@ def chat(settings):
     print('[Command]:', end='')
 
     def streamResponse(content, stop, res):
-      print(content, end='')
+      if not stop and content is not None:
+        print(content, end='')
 
     command = chat_terminal.query_command(query, cb=streamResponse)
     if not command.endswith('\n'):
@@ -132,14 +133,14 @@ def chat(settings):
 
 def parse_arg(argv=sys.argv[1:]):
   parser = argparse.ArgumentParser()
-  parser.add_argument('--config', '-c', type=str, default="configs/chat_terminal.json")
+  parser.add_argument('--config', '-c', type=str, default="configs/chat_terminal.yaml")
   parser.add_argument('--use-black-list', '-bl', action="store_true", required=False)
   parser.add_argument('--black-list-pattern', '-blc', type=str, required=False)
   return parser.parse_args(argv)
 
 def load_config(config_file):
   with open(config_file) as f:
-    configs = json.load(f)
+    configs = yaml.safe_load(f)
   return configs
 
 def main():
