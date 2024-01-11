@@ -24,5 +24,6 @@ tc_openai: &tc_openai
     params:
       stop:
         - "[User]:"
+        - "\n\n"
 
 text_completion: *tc_local_llama

@@ -7,7 +7,8 @@ import argparse
 import sys
 import logging
 
-from text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
+from libs.utils import setupLogging
+from libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
 
 default_settings = {
   "use_black_list": False,
@@ -15,8 +16,9 @@ default_settings = {
 }
 
 class ChatTerminal:
-  def __init__(self, settings):
-    tc_logger = logging.getLogger('text_completion')
+  def __init__(self, settings, logger=logging.getLogger('chat-terminal')):
+    tc_logger = logging.getLogger('text-completion')
+    self.logger = logger
 
     self.tc_def = settings['text_completion']
     self.tc_endpoint = self.tc_def['endpoint']
@@ -32,6 +34,9 @@ class ChatTerminal:
         model_name=self.tc_cfg['model'],
         logger=tc_logger,
       )
+    else:
+      raise RuntimeError(f"Unknown endpoint {self.tc_endpoint}")
+    logger.info(f"Using endpoint '{self.tc_endpoint}' for text completion")
 
     self.configs = settings['chat_terminal']
     self.user = self.configs['user']
@@ -78,7 +83,10 @@ def exec_command(command):
   return process, stdout, stderr
 
 def chat(settings):
-  chat_terminal = ChatTerminal(settings)
+  logger = logging.getLogger('chat-terminal')
+  setupLogging(logger, log_level=logging.INFO)
+
+  chat_terminal = ChatTerminal(settings, logger=logger)
 
   while True:
     query = input('[User]: ')

@@ -23,6 +23,7 @@ class LLamaTextCompletion:
     req = params
     if prompt is not None:
       req['prompt'] = prompt
+    req['stream'] = True
 
     # Creating a streaming connection with a POST request
     reply = ''
