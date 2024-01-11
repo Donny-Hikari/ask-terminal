@@ -3,25 +3,12 @@ import os
 import re
 import requests
 import json
+import argparse
+import sys
 
-settings = {
-    "text_generation": {
-        "endpoint": "local-llama",
-        "configs": {
-            "server_url": "http://127.0.0.1:40080",
-            "prompt": "../prompts/chat-terminal.txt",
-            "user": "User",
-            "agent": "Alice",
-            "options": {
-                "temperature": 0.75,
-                "top_k": 40,
-                "top_p": 0.9,
-                "n_predict": 4096,
-                "stop": ["[INST]", "[User]:"],
-                "stream": True,
-            }
-        },
-    },
+default_settings = {
+    "use_black_list": False,
+    "black_list_pattern": r"\b(rm|sudo)\b",
 }
 
 class LLamaTextGeneration:
@@ -33,7 +20,7 @@ class LLamaTextGeneration:
         with open(self.configs['prompt']) as f:
             lines = f.readlines()
         self.prompt = ''.join(lines).strip()
-        self.n_keep = self.tokenize(lines[0].strip())
+        self.n_keep = self.tokenize(self.prompt)
 
     def tokenize(self, content):
         data = {
@@ -74,8 +61,7 @@ class LLamaTextGeneration:
                         buffer = ""  # Clear the buffer after processing
                     except json.JSONDecodeError:
                         pass  # Incomplete JSON, continue accumulating data
-        reply = reply.strip()
-        self.prompt += f'{reply}'
+        self.prompt += f'{reply.strip()}'
 
         return reply
 
@@ -84,7 +70,7 @@ class LLamaTextGeneration:
             req_role=self.user,
             content=query,
             res_role='Command',
-            stop=["[Observation]:", "[{self.agent}]:"],
+            stop=["[Observation]:", f"[{self.agent}]:"],
             cb=cb,
         )
 
@@ -112,12 +98,24 @@ def chat(settings):
         def streamResponse(res):
             print(res['content'], end='')
         command = text_gen.query_command(query, cb=streamResponse)
+        if not command.endswith('\n'):
+            print('')
+        command = command.strip()
         command = command.strip('`')
-        print('')
 
-        confirm = input('Execute the command?(y/n) ')
-        observation = "Illegal command"
-        if confirm.lower() == 'y':
+        skip_confirm = False
+        if settings['use_black_list']:
+            if not re.match(settings['black_list_pattern'], command):
+                skip_confirm = True
+
+        if not skip_confirm:
+            choice = input('Execute the command?(y/n) ')
+            confirmed = choice.lower() == 'y'
+        else:
+            confirmed = True
+
+        observation = "Illegal command: Command execution refused."
+        if confirmed:
             process, stdout, stderr = exec_command(command)
             observation = ""
             if len(stdout):
@@ -130,6 +128,33 @@ def chat(settings):
 
         print('[Alice]:', end='')
         reply = text_gen.query_answer(observation, cb=streamResponse)
-        print('')
+        if not reply.endswith('\n'):
+            print('')
+        reply = reply.strip()
 
-chat(settings)
+def parse_arg(argv=sys.argv[1:]):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', '-c', type=str, default="configs/chat_terminal.json")
+    parser.add_argument('--use-black-list', '-bl', action="store_true", required=False)
+    parser.add_argument('--black-list-pattern', '-blc', type=str, required=False)
+    return parser.parse_args(argv)
+
+def load_config(config_file):
+    with open(config_file) as f:
+        configs = json.load(f)
+    return configs
+
+def main():
+    args = parse_arg()
+    settings = load_config(args.config)
+
+    for opt, default_val in default_settings.items():
+        if opt not in settings and getattr(args, opt) is None:
+            settings[opt] = default_val
+        elif getattr(args, opt) is not None:
+            settings[opt] = getattr(args, opt)
+
+    chat(settings)
+
+if __name__ == "__main__":
+    main()
