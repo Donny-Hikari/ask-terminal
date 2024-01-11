@@ -1,3 +1,4 @@
 .vscode
 llama.cpp
 scripts
+__pycache__
