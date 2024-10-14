@@ -9,14 +9,15 @@ import logging
 from pathlib import Path
 from typing import List, Union
 
-from chat_terminal.libs.utils import setupLogging
-from chat_terminal.configs import APP_ROOT, DEBUG_MODE
-from chat_terminal.chat_terminal import ChatTerminal
+from .utils import DEBUG_MODE, setup_logging, search_config_file
+from .chat_terminal import ChatTerminal
 
 DEFAULT_SETTINGS = {
   "use_black_list": False,
   "black_list_pattern": r"\b(rm|sudo)\b",
 }
+
+_logger = logging.getLogger(__name__)
 
 def exec_command(command):
   process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -24,10 +25,7 @@ def exec_command(command):
   return process, stdout, stderr
 
 def chat(settings):
-  logger = logging.getLogger('chat-terminal')
-  setupLogging(logger, log_level=logging.INFO)
-
-  chat_terminal = ChatTerminal(settings, logger=logger)
+  chat_terminal = ChatTerminal(settings)
   chat_cfg = settings['chat_terminal']
 
   while True:
@@ -83,13 +81,16 @@ def chat(settings):
 
 def parse_arg(argv=sys.argv[1:]):
   parser = argparse.ArgumentParser()
+  parser.add_argument('--debug', action='store_true')
   parser.add_argument('--config', '-c', type=str, default="configs/chat_terminal.yaml")
   parser.add_argument('--use-black-list', '-bl', action="store_true", required=False)
   parser.add_argument('--black-list-pattern', '-blc', type=str, required=False)
   return parser.parse_args(argv)
 
 def load_config(config_file: Union[str, Path]):
-  cfg_path = APP_ROOT / config_file
+  cfg_path = search_config_file(config_file)
+  if DEBUG_MODE:
+    _logger.debug(f'Loaded config from {cfg_path}')
 
   with open(cfg_path) as f:
     configs = yaml.safe_load(f)
@@ -98,6 +99,12 @@ def load_config(config_file: Union[str, Path]):
 
 def main():
   args = parse_arg()
+
+  if args.debug:
+    DEBUG_MODE.set(args.debug)
+
+  setup_logging()
+
   settings = load_config(args.config)
 
   chat_cfg = settings['chat_terminal']

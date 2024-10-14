@@ -1,4 +1,4 @@
-from pathlib import Path
+#!/usr/bin/env python3
 
 class DEBUG_MODE_CLASS():
   def __init__(self, mode=False):
@@ -11,4 +11,3 @@ class DEBUG_MODE_CLASS():
     return bool(self.mode)
 
 DEBUG_MODE = DEBUG_MODE_CLASS()
-APP_ROOT = Path(__file__).parent.parent

@@ -30,7 +30,7 @@ chat_terminal = "chat_terminal.main:main"
 packages = ["chat_terminal"]
 
 [tool.setuptools.package-data]
-chat_terminal = ["libs/*"]
+chat_terminal = ["utils/*", "libs/*"]
 
 [build-system]
 requires = ["setuptools>=51", "wheel"]

@@ -1,12 +1,12 @@
 
-CONFIGS_DIR = $(HOME)/.configs/chat-terminal
+CONFIGS_DIR = $(HOME)/.config/chat-terminal
 
-setup: install setup-configs
+setup: install install-configs
 
 install:
 	pip install .
 
-setup-configs: make-configs-dir copy-prompts copy-configs copy-credentials
+install-configs: make-configs-dir copy-prompts copy-configs copy-credentials
 
 make-configs-dir:
 	mkdir -p $(CONFIGS_DIR)
@@ -15,7 +15,7 @@ copy-prompts:
 	cp -ivr prompts $(CONFIGS_DIR)
 
 copy-configs:
-	cp -ivr configs/*.yaml $(CONFIGS_DIR)
+	cp -ivr configs $(CONFIGS_DIR)
 
 copy-credentials:
 	[ -e credentials ] && cp -ivr credentials $(CONFIGS_DIR) || true

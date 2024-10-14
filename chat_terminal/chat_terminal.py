@@ -1,13 +1,15 @@
 import logging
 import yaml
 
-from chat_terminal.libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
-from chat_terminal.configs import APP_ROOT
+from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
+from .utils import search_config_file
+
+_logger = logging.getLogger(__name__)
 
 class ChatTerminal:
-  def __init__(self, settings, logger=logging.getLogger('chat-terminal')):
+  def __init__(self, settings):
     tc_logger = logging.getLogger('text-completion')
-    self.logger = logger
+    self.logger = _logger
 
     self.tc_def = settings['text_completion']
     self.tc_endpoint = self.tc_def['endpoint']
@@ -19,7 +21,8 @@ class ChatTerminal:
         logger=tc_logger
       )
     elif self.tc_endpoint == 'openai':
-      with open(APP_ROOT / settings['credentials']['openai']) as f:
+      openai_creds_path = search_config_file(settings['credentials']['openai'])
+      with open(openai_creds_path) as f:
         openai_creds = yaml.safe_load(f)
       self.tc = OpenAITextCompletion(
         model_name=self.tc_cfg['model'],
@@ -28,13 +31,14 @@ class ChatTerminal:
       )
     else:
       raise RuntimeError(f"Unknown endpoint {self.tc_endpoint}")
-    logger.info(f"Using endpoint '{self.tc_endpoint}' for text completion")
+    self.logger.info(f"Using endpoint '{self.tc_endpoint}' for text completion")
 
     self.configs = settings['chat_terminal']
     self.user = self.configs['user']
     self.agent = self.configs['agent']
 
-    with open(APP_ROOT / self.configs['prompt']) as f:
+    prompts_path = search_config_file(self.configs['prompt'])
+    with open(prompts_path) as f:
       lines = f.readlines()
     self.prompt = ''.join(lines).strip()
     self.n_keep = self.tc.tokenize(self.prompt)
