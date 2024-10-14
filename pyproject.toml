@@ -1,0 +1,37 @@
+[project]
+name = "chat-terminal"
+version = "0.0.1"
+authors = [
+  { name = "Dongning Chen", email = "donny.hikari@gmail.com" },
+]
+description = "Chat with your terminal, getting things done using natural langauge."
+readme = "README.md"
+requires-python = ">=3.10.12"
+dependencies = [
+  "pyyaml>=5.1",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
+]
+
+[project.license]
+file = "LICENSE"
+
+[project.urls]
+Homepage = "https://github.com/donny-hikari/chat-terminal"
+Repository = "https://github.com/donny-hikari/chat-terminal"
+
+[project.scripts]
+chat_terminal = "chat_terminal.main:main"
+
+[tool.setuptools]
+packages = ["chat_terminal"]
+
+[tool.setuptools.package-data]
+chat_terminal = ["libs/*"]
+
+[build-system]
+requires = ["setuptools>=51", "wheel"]
+build-backend = "setuptools.build_meta"

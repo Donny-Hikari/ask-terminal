@@ -1,5 +1,14 @@
-.vscode
+# project related
 llama.cpp
 scripts
-__pycache__
 credentials
+
+# caches
+__pycache__
+
+# IDE
+.vscode
+
+# build generated
+*.egg-info
+build
