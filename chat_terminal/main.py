@@ -6,11 +6,14 @@ import yaml
 import argparse
 import sys
 import logging
+from pathlib import Path
+from typing import List, Union
 
 from libs.utils import setupLogging
 from libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
 
-default_settings = {
+APP_ROOT = Path(__file__).parent.parent
+DEFAULT_SETTINGS = {
   "use_black_list": False,
   "black_list_pattern": r"\b(rm|sudo)\b",
 }
@@ -30,8 +33,11 @@ class ChatTerminal:
         logger=tc_logger
       )
     elif self.tc_endpoint == 'openai':
+      with open(APP_ROOT / settings['credentials']['openai']) as f:
+        openai_creds = yaml.safe_load(f)
       self.tc = OpenAITextCompletion(
         model_name=self.tc_cfg['model'],
+        api_key=openai_creds['api_key'],
         logger=tc_logger,
       )
     else:
@@ -42,7 +48,7 @@ class ChatTerminal:
     self.user = self.configs['user']
     self.agent = self.configs['agent']
 
-    with open(self.configs['prompt']) as f:
+    with open(APP_ROOT / self.configs['prompt']) as f:
       lines = f.readlines()
     self.prompt = ''.join(lines).strip()
     self.n_keep = self.tc.tokenize(self.prompt)
@@ -87,6 +93,7 @@ def chat(settings):
   setupLogging(logger, log_level=logging.INFO)
 
   chat_terminal = ChatTerminal(settings, logger=logger)
+  chat_cfg = settings['chat_terminal']
 
   while True:
     query = input('[User]: ')
@@ -103,8 +110,8 @@ def chat(settings):
     command = command.strip('`')
 
     skip_confirm = False
-    if settings['use_black_list']:
-      if not re.match(settings['black_list_pattern'], command):
+    if chat_cfg['use_black_list']:
+      if not re.match(chat_cfg['black_list_pattern'], command):
         skip_confirm = True
 
     if not skip_confirm:
@@ -146,20 +153,24 @@ def parse_arg(argv=sys.argv[1:]):
   parser.add_argument('--black-list-pattern', '-blc', type=str, required=False)
   return parser.parse_args(argv)
 
-def load_config(config_file):
-  with open(config_file) as f:
+def load_config(config_file: Union[str, Path]):
+  cfg_path = APP_ROOT / config_file
+
+  with open(cfg_path) as f:
     configs = yaml.safe_load(f)
+
   return configs
 
 def main():
   args = parse_arg()
   settings = load_config(args.config)
 
-  for opt, default_val in default_settings.items():
-    if opt not in settings and getattr(args, opt) is None:
-      settings[opt] = default_val
+  chat_cfg = settings['chat_terminal']
+  for opt, default_val in DEFAULT_SETTINGS.items():
+    if opt not in chat_cfg and getattr(args, opt) is None:
+      chat_cfg[opt] = default_val
     elif getattr(args, opt) is not None:
-      settings[opt] = getattr(args, opt)
+      chat_cfg[opt] = getattr(args, opt)
 
   chat(settings)
 

@@ -2,28 +2,32 @@ chat_terminal:
   prompt: "prompts/chat-terminal.txt"
   user: "User"
   agent: "Alice"
+  use_black_list: False
+  black_list_pattern: \b(rm|sudo)\b
 
-tc_local_llama: &tc_local_llama
-  endpoint: "local-llama"
-  configs:
-    server_url: "http://127.0.0.1:40080"
-    params:
-      temperature: 0.75
-      top_k: 40
-      top_p: 0.9
-      n_predict: 4096
-      stop:
-        - "[INST]"
-        - "[User]:"
+credentials:
+  openai: credentials/openai.yaml
 
-tc_openai: &tc_openai
-  endpoint: "openai"
-  configs:
-    model: "gpt-3.5-turbo"
-    credentials: "credentials/openai.yaml"
-    params:
-      stop:
-        - "[User]:"
-        - "\n\n"
+text_completion_endpoints:
+  local_llama: &local_llama
+    endpoint: "local-llama"
+    configs:
+      server_url: "http://127.0.0.1:40080"
+      params:
+        temperature: 0.75
+        top_k: 40
+        top_p: 0.9
+        n_predict: 4096
+        stop:
+          - "[INST]"
+          - "[User]:"
+  openai: &openai
+    endpoint: "openai"
+    configs:
+      model: "gpt-3.5-turbo"
+      credentials: "credentials/openai.yaml"
+      params:
+        stop:
+          - "[User]:"
 
-text_completion: *tc_local_llama
+text_completion: *local_llama
