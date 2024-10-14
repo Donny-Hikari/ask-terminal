@@ -2,12 +2,13 @@ import subprocess
 import os
 import re
 import requests
-import yaml
 import argparse
 import sys
 import logging
 from pathlib import Path
 from typing import List, Union
+
+import yaml
 
 from .utils import DEBUG_MODE, setup_logging, search_config_file
 from .chat_terminal import ChatTerminal
@@ -103,7 +104,7 @@ def main():
   if args.debug:
     DEBUG_MODE.set(args.debug)
 
-  setup_logging()
+  setup_logging(level=logging.DEBUG if DEBUG_MODE else logging.INFO)
 
   settings = load_config(args.config)
 

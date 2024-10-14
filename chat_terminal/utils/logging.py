@@ -3,16 +3,12 @@
 import logging
 import sys
 
-from .debug_mode import DEBUG_MODE
-
 LOG_STATS = 11
 LOG_VERBOSE = 15
 
-def setup_logging():
+def setup_logging(level=logging.INFO, _format='[%(asctime)s %(levelname)-4s %(name)s] %(message)s'):
   logging.addLevelName(LOG_STATS, 'STATS')
   logging.addLevelName(LOG_VERBOSE, 'VERBOSE')
-
-  _format = '[%(asctime)s %(levelname)-4s %(name)s] %(message)s'
 
   herr = logging.StreamHandler(sys.stderr)
   herr.setLevel(logging.ERROR)
@@ -21,7 +17,7 @@ def setup_logging():
   hout.addFilter(lambda record: record.levelno < logging.ERROR)
 
   logging.basicConfig(
-    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
+    level=level,
     format=_format,
     handlers=[
       hout,
