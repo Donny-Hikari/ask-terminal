@@ -1,6 +1,10 @@
 import logging
+import os
+from typing import List
 
 import yaml
+from mext import Mext
+from pydantic import BaseModel
 
 from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
 from .utils import search_config_file
@@ -9,6 +13,13 @@ from .settings import Settings
 
 _logger = logging.getLogger(__name__)
 
+
+class ChatHistoryItem(BaseModel):
+  query: str
+  thinking: str = ""
+  command: str = ""
+  observation: str = ""
+  reply: str = ""
 
 class ChatTerminal:
   def __init__(self, settings: Settings):
@@ -44,38 +55,83 @@ class ChatTerminal:
 
     self._logger.info(f"Using endpoint '{self._tc_endpoint}' for text completion")
 
-    prompts_path = search_config_file(self._configs.prompt)
-    with open(prompts_path) as f:
-      lines = f.readlines()
-    self._prompt = ''.join(lines).strip()
-    self._n_keep = self._tc.tokenize(self._prompt)
+    self._roles = [
+      f"{self._user}",
+      f"{self._agent} Thinking",
+      "Command",
+      "Observation",
+      f"{self._agent}",
+    ]
 
-  def chat(self, req_role, content, res_role, stop=[], cb=None):
-    self._prompt += f'\n[{req_role}]: {content}\n[{res_role}]:'
+    prompts_path = search_config_file(self._configs.prompt)
+    self._context_mgr = Mext()
+    self._context_mgr.set_template(template_fn=prompts_path)
+    self._context_mgr.set_params(
+      user=self._user,
+      agent=self._agent,
+
+      shell="bash",  # default using bash
+    )
+    self._history: List[ChatHistoryItem] = []
+
+  def chat(self, gen_role, stop=[], cb=None):
+    prompt = self._context_mgr.compose(
+      gen_role=gen_role,
+      history=self._history,
+    )
     params = {
       **self._tc_params,
       "stop": self._tc_params.get("stop", []) + stop,
     }
 
-    reply = self._tc.create(prompt=self._prompt, params=params, cb=cb)
-    self._prompt += reply.strip()
+    reply = self._tc.create(prompt=prompt, params=params, cb=cb)
+    reply = reply.strip()
 
     return reply
 
-  def query_command(self, query, cb=None):
-    return self.chat(
-      req_role=self._user,
-      content=query,
-      res_role='Command',
-      stop=["[Observation]:", f"[{self._agent}]:"],
-      cb=cb,
+  def query_command(self, query, env={}, cb=None):
+    self._history.append(
+      ChatHistoryItem(query=query),
     )
 
-  def query_answer(self, observation, cb):
-    return self.chat(
-      req_role='Observation',
-      content=observation,
-      res_role=self._agent,
-      stop=["[Command]:", "[Observation]:"],
-      cb=cb,
-    )
+    with self._context_mgr.use_params(**env):
+      if self._configs.use_thinking:
+        gen_role = f"{self._agent} Thinking"
+        thinking = self.chat(
+          gen_role=gen_role,
+          stop=self._roles[self._roles.index(gen_role)+1:],
+          cb=cb,
+        )
+        self._history[-1].thinking = thinking
+
+      gen_role = "Command"
+      command = self.chat(
+        gen_role=gen_role,
+        stop=self._roles[self._roles.index(gen_role)+1:],
+        cb=cb,
+      )
+      command = command.strip('`')
+      self._history[-1].command = command
+
+    return {
+      'thinking': thinking,
+      'command': command,
+    }
+
+  def query_reply(self, observation, env={}, cb=None):
+    if self._history[-1].observation:
+      raise RuntimeError("Reply can only be called once for each query.")
+    self._history[-1].observation = observation
+
+    with self._context_mgr.use_params(**env):
+      gen_role = f"{self._agent}"
+      reply = self.chat(
+        gen_role=gen_role,
+        stop=self._roles[self._roles.index(gen_role)+1:],
+        cb=cb,
+      )
+      self._history[-1].reply = reply
+
+    return {
+      'reply': reply,
+    }
