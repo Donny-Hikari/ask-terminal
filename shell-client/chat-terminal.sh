@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
 CHAT_TERMINAL_SERVER_URL="http://localhost:16099"
 CHAT_TERMINAL_USE_BLACKLIST=false
