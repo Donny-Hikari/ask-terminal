@@ -50,11 +50,11 @@ _query_reply() {
   local observation="$2"
   local data
 
-  observation=$(echo $observation | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))")
+  observation=$(echo -e "$observation" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))")
 
   data="{ \
     \"command_executed\": $executed, \
-    \"message\": $(echo -E $observation), \
+    \"message\": $(echo -E "$observation"), \
     \"env\": $(_get_env)
   }"
 
@@ -122,10 +122,21 @@ _chat_once() {
     # ensure execution in current shell
     # use /dev/shm to avoid wearing the disk
     memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
-    (tail -n +1 -f $memfile) &
+    if [[ -n $BASH_VERSION ]]; then
+      { tail -n +1 -f $memfile & } 2>/dev/null
+    elif [[ -n $ZSH_VERSION ]]; then
+      (tail -n +1 -f $memfile ) &!
+    else
+      (tail -n +1 -f $memfile) &
+    fi
     display_job=$!
     eval "$_command" 2>&1 1>$memfile
-    kill -9 $display_job
+    sleep 1  # wait for tail to display all contents
+    if [[ -n $BASH_VERSION ]]; then
+      { kill $display_job && wait $display_job; } 2>/dev/null
+    elif [[ -n $ZSH_VERSION ]]; then
+      kill $display_job
+    fi
     observation=$(cat $memfile)
     rm $memfile
   fi
