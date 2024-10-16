@@ -50,13 +50,11 @@ _query_reply() {
   local observation="$2"
   local data
 
-  observation=${observation//\\/\\\\}
-  observation=${observation//$'\n'/\\n}
-  observation=${observation//\"/\\\"}
+  observation=$(echo $observation | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))")
 
   data="{ \
     \"command_executed\": $executed, \
-    \"message\": \"$(echo -E $observation)\", \
+    \"message\": $(echo -E $observation), \
     \"env\": $(_get_env)
   }"
 
@@ -124,10 +122,12 @@ _chat_once() {
     # ensure execution in current shell
     # use /dev/shm to avoid wearing the disk
     memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
+    (tail -n +1 -f $memfile) &
+    display_job=$!
     eval "$_command" 2>&1 1>$memfile
+    kill -9 $display_job
     observation=$(cat $memfile)
     rm $memfile
-    echo -e "$observation"
   fi
 
   result=$(_query_reply "$exec_command" "$observation")
