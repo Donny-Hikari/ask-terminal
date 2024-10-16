@@ -3,11 +3,11 @@
 import logging
 import sys
 
-LOG_STATS = 11
+LOG_HEAVY = 9
 LOG_VERBOSE = 15
 
 def setup_logging(level=logging.INFO, _format='[%(asctime)s %(levelname)-4s %(name)s] %(message)s'):
-  logging.addLevelName(LOG_STATS, 'STATS')
+  logging.addLevelName(LOG_HEAVY, 'HEAVY')
   logging.addLevelName(LOG_VERBOSE, 'VERBOSE')
 
   herr = logging.StreamHandler(sys.stderr)

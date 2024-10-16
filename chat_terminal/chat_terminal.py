@@ -7,7 +7,7 @@ from mext import Mext
 from pydantic import BaseModel
 
 from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
-from .utils import search_config_file
+from .utils import search_config_file, LOG_HEAVY
 from .settings import Settings
 
 
@@ -18,6 +18,7 @@ class ChatHistoryItem(BaseModel):
   query: str
   thinking: str = ""
   command: str = ""
+  command_refused: bool = False
   observation: str = ""
   reply: str = ""
 
@@ -74,6 +75,11 @@ class ChatTerminal:
     )
     self._history: List[ChatHistoryItem] = []
 
+  def _get_stop_from_role(self, role: str):
+    return [
+      f'[{r}]:' for r in self._roles[self._roles.index(role)+1:]
+    ]
+
   def chat(self, gen_role, stop=[], cb=None):
     prompt = self._context_mgr.compose(
       gen_role=gen_role,
@@ -83,6 +89,8 @@ class ChatTerminal:
       **self._tc_params,
       "stop": self._tc_params.get("stop", []) + stop,
     }
+
+    _logger.log(LOG_HEAVY, f"Prompt:\n{prompt}")
 
     reply = self._tc.create(prompt=prompt, params=params, cb=cb)
     reply = reply.strip()
@@ -99,7 +107,7 @@ class ChatTerminal:
         gen_role = f"{self._agent} Thinking"
         thinking = self.chat(
           gen_role=gen_role,
-          stop=self._roles[self._roles.index(gen_role)+1:],
+          stop=self._get_stop_from_role(gen_role),
           cb=cb,
         )
         self._history[-1].thinking = thinking
@@ -107,7 +115,7 @@ class ChatTerminal:
       gen_role = "Command"
       command = self.chat(
         gen_role=gen_role,
-        stop=self._roles[self._roles.index(gen_role)+1:],
+        stop=self._get_stop_from_role(gen_role),
         cb=cb,
       )
       command = command.strip('`')
@@ -118,16 +126,15 @@ class ChatTerminal:
       'command': command,
     }
 
-  def query_reply(self, observation, env={}, cb=None):
-    if self._history[-1].observation:
-      raise RuntimeError("Reply can only be called once for each query.")
+  def query_reply(self, command_refused, observation="", env={}, cb=None):
+    self._history[-1].command_refused = command_refused
     self._history[-1].observation = observation
 
     with self._context_mgr.use_params(**env):
       gen_role = f"{self._agent}"
       reply = self.chat(
         gen_role=gen_role,
-        stop=self._roles[self._roles.index(gen_role)+1:],
+        stop=self._get_stop_from_role(gen_role),
         cb=cb,
       )
       self._history[-1].reply = reply

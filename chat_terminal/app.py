@@ -51,6 +51,9 @@ class ChatQueryModel(BaseModel):
   message: str
   env: ChatQueryEnvModel = ChatQueryEnvModel()
 
+class ChatQueryReplyModel(ChatQueryModel):
+  command_executed: bool
+
 @app.post('/chat/{conversation_id}/query_command')
 async def query_command(conversation_id: str, query: ChatQueryModel):
   if conversation_id not in chat_pool:
@@ -68,7 +71,7 @@ async def query_command(conversation_id: str, query: ChatQueryModel):
     }
 
 @app.post('/chat/{conversation_id}/query_reply')
-async def query_reply(conversation_id: str, query: ChatQueryModel):
+async def query_reply(conversation_id: str, query: ChatQueryReplyModel):
   if conversation_id not in chat_pool:
     return {
       "status": "error",
@@ -76,7 +79,11 @@ async def query_reply(conversation_id: str, query: ChatQueryModel):
     }
   conversation = chat_pool[conversation_id]
 
-  response = conversation.query_reply(query.message, env=query.env.model_dump())
+  response = conversation.query_reply(
+    command_refused=not query.command_executed,
+    observation=query.message,
+    env=query.env.model_dump(),
+  )
 
   return {
       "status": "success",

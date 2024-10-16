@@ -39,9 +39,17 @@ _query_command() {
 }
 
 _query_reply() {
-  local observation="$1"
-  local data="{ \
-    \"message\": \"$(echo -E ${observation//$'\n'/\\n})\", \
+  local executed="$1"
+  local observation="$2"
+  local data
+
+  observation=${observation//\\/\\\\}
+  observation=${observation//$'\n'/\\n}
+  observation=${observation//\"/\\\"}
+
+  data="{ \
+    \"command_executed\": $executed, \
+    \"message\": \"$(echo -E $observation)\", \
     \"env\": $(_get_env)
   }"
 
@@ -49,7 +57,7 @@ _query_reply() {
 }
 
 _confirm_command_execution() {
-  echo -n "Execute the command? (y/[N])"
+  echo -n "Execute the command? (y/[N]) "
   if [[ -n "$BASH_VERSION" ]]; then
     read -n 1 choice
   elif [[ -n "$ZSH_VERSION" ]]; then
@@ -72,7 +80,7 @@ _chat_once() {
   local thinking
   local _command
   local exec_command
-  local observation
+  local observation=
 
   result=$(_query_command "$query")
   _status=$(echo -E "$result" | jq -r ".status")
@@ -104,14 +112,12 @@ _chat_once() {
     fi
   fi
 
-  if ! $exec_command; then
-    return
+  if $exec_command; then
+    observation=$(eval "$_command" 2>&1)
+    echo -e "$observation"
   fi
 
-  observation=$(eval "$_command")
-  echo -e "$observation"
-
-  result=$(_query_reply "$observation")
+  result=$(_query_reply "$exec_command" "$observation")
   _status=$(echo -E "$result" | jq -r ".status")
   if [[ $_status != "success" ]]; then
     echo "Failed to commute with server: $result"
@@ -120,6 +126,10 @@ _chat_once() {
 
   reply=$(echo -E "$result" | jq -r '.payload.reply')
   echo "Reply> $reply"
+}
+
+chat_terminal_reset() {
+  _conversation_id=
 }
 
 chat_terminal() {
@@ -134,6 +144,7 @@ chat_terminal() {
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
       echo "Failed to initialize converstaion: ${result}"
+      _conversation_id=
       return 1
     fi
     echo "Initialized conversation: $_conversation_id"

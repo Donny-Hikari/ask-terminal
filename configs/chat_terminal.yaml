@@ -1,7 +1,5 @@
 chat_terminal:
   endpoint: "local-llama"
-  use_black_list: False
-  black_list_pattern: \b(rm|sudo)\b
 
   prompt: "prompts/chat-terminal.mext"
   user: "User"
