@@ -20,7 +20,7 @@ alias ask=chat-terminal
 Start the server:
 
 ```shell
-$ OPENAI_API_KEY=... chat-terminal-server
+$ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
 ```
 
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
@@ -65,4 +65,25 @@ text_completion_endpoints:
     model: gpt-3.5-turbo
     credential_file: credentials/openai.yaml  # or specify the full path
     # ... other configuration options
+```
+
+For how to get an API key, see [Quickstart tutorial - OpenAI API](https://platform.openai.com/docs/quickstart).
+
+## Start Chat Terminal Server at Startup
+
+[services/chat-terminal-server.service](./services/chat-terminal-server.service) offers a template for starting Chat Terminal Server as a systemd service.
+
+To install the service, first run:
+
+```shell
+$ make install-service
+```
+
+Then edit `~/.config/systemd/user/chat-terminal-server.service` as you need.
+
+Finally, enable (and start) the service with:
+
+```shell
+$ systemctl --user daemon-reload
+$ systemctl --user enable --now chat-terminal-server.service
 ```

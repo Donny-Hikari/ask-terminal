@@ -59,3 +59,7 @@ delete-all-scripts:
 
 clean: uninstall
 	rm -rdf build dist chat_terminal.egg-info
+
+install-service:
+	cp $(COPY_FLAG) services/chat-terminal-server.service $(HOME)/.config/systemd/user/
+	sed -i 's|# Environment=PATH=$$PATH|Environment=PATH=$(PATH)|' $(HOME)/.config/systemd/user/chat-terminal-server.service
