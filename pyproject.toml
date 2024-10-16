@@ -1,6 +1,6 @@
 [project]
 name = "chat-terminal"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name = "Dongning Chen", email = "donny.hikari@gmail.com" },
 ]
@@ -28,7 +28,7 @@ Homepage = "https://github.com/donny-hikari/chat-terminal"
 Repository = "https://github.com/donny-hikari/chat-terminal"
 
 [project.scripts]
-chat_terminal = "chat_terminal.main:main"
+chat-terminal-server = "chat_terminal.server:main"
 
 [tool.setuptools]
 packages = ["chat_terminal"]

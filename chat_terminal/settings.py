@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 
 class SettingsChatTerminal(BaseModel):
   endpoint: str = "local-llama"
+  prompt: str = "prompts/chat-terminal.mext"
   use_thinking: bool = True
 
-  prompt: str = "prompts/chat-terminal.mext"
   user: str = "User"
   agent: str = "Assistant"
 

@@ -3,6 +3,7 @@
 CHAT_TERMINAL_SERVER_URL="http://localhost:16099"
 CHAT_TERMINAL_USE_BLACKLIST=false
 CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"
+CHAT_TERMINAL_ENDPOINT=
 
 _conversation_id=
 
@@ -16,16 +17,22 @@ _curl_server() {
     -d "$data"
 }
 
-_init_conversation() {
-  _curl_server "/chat/${_conversation_id}/init"
-}
-
 _get_env() {
   local shell_name="${SHELL##*/}"
 
   echo "{ \
     \"shell\": \"$shell_name\" \
   }"
+}
+
+_init_conversation() {
+  local data="{"
+  if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
+    data+="\"endpoint\": \"$CHAT_TERMINAL_ENDPOINT\""
+  fi
+  data+="}"
+
+  _curl_server "/chat/${_conversation_id}/init" "$data"
 }
 
 _query_command() {
@@ -80,12 +87,13 @@ _chat_once() {
   local thinking
   local _command
   local exec_command
-  local observation=
+  local observation
+  local line
 
   result=$(_query_command "$query")
   _status=$(echo -E "$result" | jq -r ".status")
   if [[ $_status != "success" ]]; then
-    echo "Failed to commute with server: $result"
+    echo "Failed to generate command: $result"
     return 1
   fi
 
@@ -113,14 +121,19 @@ _chat_once() {
   fi
 
   if $exec_command; then
-    observation=$(eval "$_command" 2>&1)
+    # ensure execution in current shell
+    # use /dev/shm to avoid wearing the disk
+    memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
+    eval "$_command" 2>&1 1>$memfile
+    observation=$(cat $memfile)
+    rm $memfile
     echo -e "$observation"
   fi
 
   result=$(_query_reply "$exec_command" "$observation")
   _status=$(echo -E "$result" | jq -r ".status")
   if [[ $_status != "success" ]]; then
-    echo "Failed to commute with server: $result"
+    echo "Failed to generate reply: $result"
     return 1
   fi
 
@@ -128,11 +141,11 @@ _chat_once() {
   echo "Reply> $reply"
 }
 
-chat_terminal_reset() {
+chat-terminal-reset() {
   _conversation_id=
 }
 
-chat_terminal() {
+chat-terminal() {
   local query="$@"
   local result
   local _status
@@ -148,6 +161,9 @@ chat_terminal() {
       return 1
     fi
     echo "Initialized conversation: $_conversation_id"
+    if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
+      echo "Using endpoint: $CHAT_TERMINAL_ENDPOINT"
+    fi
   fi
 
   if [[ -n "$query" ]]; then

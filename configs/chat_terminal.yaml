@@ -1,7 +1,7 @@
 chat_terminal:
   endpoint: "local-llama"
-
   prompt: "prompts/chat-terminal.mext"
+
   user: "User"
   agent: "Assistant"
 

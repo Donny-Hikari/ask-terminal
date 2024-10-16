@@ -11,6 +11,23 @@ from .settings import Settings, SettingsChatTerminal
 _logger = logging.getLogger(__name__)
 
 
+class ChatInitModel(BaseModel):
+  endpoint: Optional[str] = None
+
+class ChatQueryEnvModel(BaseModel):
+  shell: Optional[Literal["bash", "zsh"]] = None
+
+class ChatQueryModel(BaseModel):
+  message: str
+  env: ChatQueryEnvModel = ChatQueryEnvModel()
+
+class ChatQueryCommandModel(ChatQueryModel):
+  pass
+
+class ChatQueryReplyModel(ChatQueryModel):
+  command_executed: bool
+
+
 app = FastAPI()
 
 settings = Settings()
@@ -21,16 +38,16 @@ def set_settings(_settings: Settings):
   settings = _settings
 
 @app.post('/chat/{conversation_id}/init')
-async def init(conversation_id: str, init_cfg: SettingsChatTerminal=None):
+async def init(conversation_id: str, init_cfg: ChatInitModel=ChatInitModel()):
   if conversation_id in chat_pool:
     return {
       "status": "error",
-      "error": "conversation already exists",
+      "error": "Conversation already exists",
     }
 
-  chat_settings = settings.model_copy()
-  if init_cfg is not None:
-    chat_settings.chat_terminal = init_cfg
+  chat_settings = settings.model_copy(deep=True)
+  for prop in init_cfg.model_fields_set:
+    setattr(chat_settings.chat_terminal, prop, getattr(init_cfg, prop))
 
   try:
     chat_pool[conversation_id] = ChatTerminal(chat_settings)
@@ -44,26 +61,22 @@ async def init(conversation_id: str, init_cfg: SettingsChatTerminal=None):
     "status": "success",
   }
 
-class ChatQueryEnvModel(BaseModel):
-  shell: Optional[Literal["bash", "zsh"]] = None
-
-class ChatQueryModel(BaseModel):
-  message: str
-  env: ChatQueryEnvModel = ChatQueryEnvModel()
-
-class ChatQueryReplyModel(ChatQueryModel):
-  command_executed: bool
-
 @app.post('/chat/{conversation_id}/query_command')
-async def query_command(conversation_id: str, query: ChatQueryModel):
+async def query_command(conversation_id: str, query: ChatQueryCommandModel):
   if conversation_id not in chat_pool:
     return {
       "status": "error",
-      "error": "conversation does not exist",
+      "error": "Conversation does not exist",
     }
   conversation = chat_pool[conversation_id]
 
-  response = conversation.query_command(query.message, env=query.env.model_dump())
+  try:
+    response = conversation.query_command(query.message, env=query.env.model_dump())
+  except Exception:
+    return {
+      "status": "error",
+      "error": "Failed to communicate with upstream endpoint"
+    }
 
   return {
       "status": "success",
@@ -75,7 +88,7 @@ async def query_reply(conversation_id: str, query: ChatQueryReplyModel):
   if conversation_id not in chat_pool:
     return {
       "status": "error",
-      "error": "conversation does not exist",
+      "error": "Conversation does not exist",
     }
   conversation = chat_pool[conversation_id]
 
