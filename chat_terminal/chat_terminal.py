@@ -18,9 +18,11 @@ class ChatHistoryItem(BaseModel):
   query: str
   thinking: str = ""
   command: str = ""
-  command_refused: bool = False
   observation: str = ""
   reply: str = ""
+
+  command_refused: bool = False
+  observation_received: bool = False
 
 class ChatTerminal:
   def __init__(self, settings: Settings):
@@ -63,6 +65,7 @@ class ChatTerminal:
       "Observation",
       f"{self._agent}",
     ]
+    self._roles_hint = list(map(lambda x: f'[{x}]', self._roles))
 
     prompts_path = search_config_file(self._configs.prompt)
     self._context_mgr = Mext()
@@ -76,9 +79,7 @@ class ChatTerminal:
     self._history: List[ChatHistoryItem] = []
 
   def _get_stop_from_role(self, role: str):
-    return [
-      f'[{r}]:' for r in self._roles[self._roles.index(role)+1:]
-    ]
+    return self._roles_hint
 
   def chat(self, gen_role, stop=[], cb=None):
     prompt = self._context_mgr.compose(
@@ -94,6 +95,8 @@ class ChatTerminal:
 
     reply = self._tc.create(prompt=prompt, params=params, cb=cb)
     reply = reply.strip()
+
+    _logger.log(LOG_HEAVY, f"Response:\n{reply}")
 
     return reply
 
@@ -129,6 +132,7 @@ class ChatTerminal:
   def query_reply(self, command_refused, observation="", env={}, cb=None):
     self._history[-1].command_refused = command_refused
     self._history[-1].observation = observation
+    self._history[-1].observation_received = True
 
     with self._context_mgr.use_params(**env):
       gen_role = f"{self._agent}"

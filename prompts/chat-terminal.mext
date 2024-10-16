@@ -27,9 +27,10 @@ Conversation with {user}:
   {@if item.command_refused}
 [Observation]: The command is refused by the user.
   {@else}
-    {@if not empty item.observation}
-[Observation]:
+    {@if item.observation_received}
+[Observation]:{@if empty item.observation} The command has no output.{@else}
 {@format fenced_block item.observation marker="~"}
+      {@endif}
     {@endif}
   {@endif}
   {@if not empty item.reply}

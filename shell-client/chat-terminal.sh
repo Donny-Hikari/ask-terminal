@@ -6,6 +6,7 @@ CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"
 CHAT_TERMINAL_ENDPOINT=
 
 _conversation_id=
+_MESSAGE_PREFIX="%"
 
 _curl_server() {
   local url="$1"
@@ -50,7 +51,7 @@ _query_reply() {
   local observation="$2"
   local data
 
-  observation=$(echo -e "$observation" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))")
+  observation=$(echo -ne "$observation" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))")
 
   data="{ \
     \"command_executed\": $executed, \
@@ -61,8 +62,12 @@ _query_reply() {
   _curl_server "/chat/${_conversation_id}/query_reply" "$data"
 }
 
+_print_response() {
+  echo "$1> $2"
+}
+
 _confirm_command_execution() {
-  echo -n "Execute the command? (y/[N]) "
+  echo -n $_MESSAGE_PREFIX "Execute the command? (y/[N]) "
   if [[ -n "$BASH_VERSION" ]]; then
     read -n 1 choice
   elif [[ -n "$ZSH_VERSION" ]]; then
@@ -91,14 +96,14 @@ _chat_once() {
   result=$(_query_command "$query")
   _status=$(echo -E "$result" | jq -r ".status")
   if [[ $_status != "success" ]]; then
-    echo "Failed to generate command: $result"
+    echo $_MESSAGE_PREFIX "Failed to generate command: $result"
     return 1
   fi
 
   thinking=$(echo -E "$result" | jq -r '.payload.thinking')
   _command=$(echo -E "$result" | jq -r '.payload.command')
-  echo "Thought> $thinking"
-  echo "Command> $_command"
+  _print_response "Thought" "$thinking"
+  _print_response "Command" "$_command"
 
   exec_command=false
   if [[ "$CHAT_TERMINAL_USE_BLACKLIST" == "true" ]]; then
@@ -139,17 +144,18 @@ _chat_once() {
     fi
     observation=$(cat $memfile)
     rm $memfile
+    echo $_MESSAGE_PREFIX "Command finished"
   fi
 
   result=$(_query_reply "$exec_command" "$observation")
   _status=$(echo -E "$result" | jq -r ".status")
   if [[ $_status != "success" ]]; then
-    echo "Failed to generate reply: $result"
+    echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
     return 1
   fi
 
   reply=$(echo -E "$result" | jq -r '.payload.reply')
-  echo "Reply> $reply"
+  _print_response "Reply" "$reply"
 }
 
 chat-terminal-reset() {
@@ -167,13 +173,13 @@ chat-terminal() {
     result=$(_init_conversation)
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
-      echo "Failed to initialize converstaion: ${result}"
+      echo $_MESSAGE_PREFIX "Failed to initialize converstaion: ${result}"
       _conversation_id=
       return 1
     fi
-    echo "Initialized conversation: $_conversation_id"
+    echo $_MESSAGE_PREFIX "Initialized conversation: $_conversation_id"
     if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
-      echo "Using endpoint: $CHAT_TERMINAL_ENDPOINT"
+      echo $_MESSAGE_PREFIX "Using endpoint: $CHAT_TERMINAL_ENDPOINT"
     fi
   fi
 
