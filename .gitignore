@@ -2,6 +2,8 @@
 llama.cpp
 scripts
 credentials
+locals
+local.mk
 
 # caches
 __pycache__

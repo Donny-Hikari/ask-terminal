@@ -173,6 +173,9 @@ chat-terminal() {
     result=$(_init_conversation)
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
+      if [[ -z "$result" ]]; then
+        result="server not online"
+      fi
       echo $_MESSAGE_PREFIX "Failed to initialize converstaion: ${result}"
       _conversation_id=
       return 1

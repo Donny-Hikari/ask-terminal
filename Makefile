@@ -1,8 +1,13 @@
 
-COPY_OVERWRITE := false
-CONFIGS_DIR := $(HOME)/.config/chat-terminal
-COPY_FLAG := -vr
-PHRASE := ">>"
+# constant
+PHRASE ?= ">>"
+
+# variables
+COPY_OVERWRITE ?= false
+COPY_FLAG ?= -vr
+SHELL_CLIENT_DIR ?= $(HOME)/.chat-terminal
+CONFIGS_DIR ?= $(HOME)/.config/chat-terminal
+CONFIG_FILE_SOURCE ?= configs/chat-terminal.yaml
 
 ifeq ($(COPY_OVERWRITE), false)
 	COPY_FLAG += -i
@@ -23,9 +28,10 @@ install:
 
 install-configs: pre-install-configs make-configs-dir copy-prompts copy-configs copy-credentials
 
-install-scripts:
+install-scripts: shell-client/chat-terminal.sh
 	@echo $(PHRASE) "Installing scripts..."
-	cp $(COPY_FLAG) shell-client/chat-terminal.sh $(HOME)/.dsh/.dshrc.d/chat-terminal.dshrc
+	mkdir -p $(SHELL_CLIENT_DIR)
+	cp $(COPY_FLAG) shell-client/chat-terminal.sh $(SHELL_CLIENT_DIR)/chat-terminal.dshrc
 
 pre-install-configs:
 	@echo $(PHRASE) "Installing config files..."
@@ -37,7 +43,7 @@ copy-prompts:
 	cp $(COPY_FLAG) prompts $(CONFIGS_DIR)
 
 copy-configs:
-	cp $(COPY_FLAG) configs $(CONFIGS_DIR)
+	cp $(COPY_FLAG) $(CONFIG_FILE_SOURCE) $(CONFIGS_DIR)
 
 copy-credentials:
 	[ -e credentials ] && cp $(COPY_FLAG) credentials $(CONFIGS_DIR) || true

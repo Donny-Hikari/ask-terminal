@@ -47,12 +47,17 @@ class ChatTerminal:
         logger=tc_logger,
       )
     elif self._tc_endpoint == 'openai':
-      openai_creds_path = search_config_file(self._tc_cfg['credentials'])
-      with open(openai_creds_path) as f:
-        openai_creds = yaml.safe_load(f)
+      api_key = None
+      creds_file = self._tc_cfg.get('credentials', None)
+      if creds_file:
+        openai_creds_path = search_config_file(creds_file)
+        with open(openai_creds_path) as f:
+          openai_creds = yaml.safe_load(f)
+          api_key = openai_creds.get('api_key', None)
+
       self._tc = OpenAITextCompletion(
         model_name=self._tc_cfg['model'],
-        api_key=openai_creds['api_key'],
+        api_key=api_key,
         logger=tc_logger,
       )
 
