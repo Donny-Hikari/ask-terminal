@@ -26,8 +26,9 @@ class ChatHistoryItem(BaseModel):
   observation_received: bool = False
 
 class ChatTerminal:
-  TRUNCATED_INDICATOR = "<...TRUNCATED...>"
-  TRUNCATE_FRONT_RATIO = 0.3
+  TRUNCATION_INDICATOR = "<...TRUNCATED...>"
+  TRUNCATION_FRONT_RATIO = 0.3
+  TRUNCATION_COARSE_GAP = 16
 
   def __init__(self, settings: Settings):
     self._logger = _logger
@@ -170,8 +171,9 @@ class ChatTerminal:
     self._history[-1].observation = self._tc.truncate(
       observation,
       self._configs.max_observation_length,
-      truncated_indicator=ChatTerminal.TRUNCATED_INDICATOR,
-      front_ratio=ChatTerminal.TRUNCATE_FRONT_RATIO,
+      truncation_indicator=ChatTerminal.TRUNCATION_INDICATOR,
+      front_ratio=ChatTerminal.TRUNCATION_FRONT_RATIO,
+      coarse_gap=ChatTerminal.TRUNCATION_COARSE_GAP,  # approximately 1/3 speed up if coarse gap is 16 and max observation length is 4096
     )
     self._history[-1].observation_received = True
 

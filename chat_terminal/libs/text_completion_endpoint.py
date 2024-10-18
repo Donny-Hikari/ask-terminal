@@ -20,26 +20,43 @@ class TextCompletionBase:
   def _truncate_count_tokens(self, content):
     return len(self.tokenize(content))
 
-  def truncate(self, content, target_num, truncated_indicator, front_ratio=0.5, return_is_truncated=False):
+  def truncate(self, content, target_num, truncation_indicator, front_ratio=0.5, coarse_gap=0, return_is_truncated=False):
+    """
+    Params
+    ======
+    front_ratio:
+      the ratio of the content to be preserved in the front over the truncated content
+
+    coarse_gap:
+      allowing the final number of tokens to be `coarse_gap` tokens larger or smaller than the `target_num`.
+      This could speed up the binary search largely. The speed up ratio can be calculated as `log2(coarse_gap) / log2(original_tokens_count_of_content)`.
+    """
+
     if self._truncate_count_tokens(content) <= target_num:
       if return_is_truncated:
         return content, False
       else:
         return content
 
+    if coarse_gap > 0:
+      coarse_gap = min(coarse_gap, target_num//2)
+
     l = 0; r = len(content)
     while l < r:
       m = (l+r)>>1
       front = int(m*front_ratio)
       rear = m - front
-      num_tokens = self._truncate_count_tokens(content[:front] + truncated_indicator + content[-rear:])
+      num_tokens = self._truncate_count_tokens(content[:front] + truncation_indicator + content[-rear:])
+      if coarse_gap > 0 and abs(num_tokens - target_num) <= coarse_gap:
+        l = m
+        break
       if num_tokens < target_num:
         l = m+1
       else:
         r = m
     front = int(l*front_ratio)
     rear = l - front
-    res = content[:front] + truncated_indicator + content[-rear:]
+    res = content[:front] + truncation_indicator + content[-rear:]
 
     if return_is_truncated:
       return res, True
