@@ -190,7 +190,18 @@ chat-terminal() {
     _chat_once "$query"
   else
     while true; do
-      echo -n "> " && read query
+      if [[ -n $BASH_VERSION ]]; then
+        read -e -p "> " query
+      elif [[ -n $ZSH_VERSION ]]; then
+        query=
+        vared -e -p "> " query
+      else
+        echo -n "> " && read query
+      fi
+      if [[ $? -eq 1 ]]; then
+        # EOF
+        break
+      fi
       if [[ -n $query ]]; then
         _chat_once "$query"
       fi
