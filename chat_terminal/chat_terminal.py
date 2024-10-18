@@ -63,6 +63,7 @@ class ChatTerminal:
       agent=self._agent,
 
       shell="bash",  # default using bash
+      use_thinking=self._configs.use_thinking,
     )
     self._history: List[ChatHistoryItem] = []
 

@@ -1,12 +1,17 @@
 #!/usr/bin/env sh
 
-CHAT_TERMINAL_SERVER_URL="http://localhost:16099"
-CHAT_TERMINAL_USE_BLACKLIST=false
-CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"
-CHAT_TERMINAL_ENDPOINT=
+# environment variables
 
-_conversation_id=
+CHAT_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the chat-terminal-server
+CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
+CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution, use with CHAT_TERMINAL_USE_BLACKLIST
+CHAT_TERMINAL_ENDPOINT=  # text completion endpoints, default is specified in the server config file
+CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
+
+# internal variables
+
 _MESSAGE_PREFIX="%"
+_conversation_id=
 
 
 # handy functions
@@ -186,15 +191,17 @@ _chat_once() {
     _advance_read -p "Clarification: " observation
   fi
 
-  result=$(_query_reply "$exec_command" "$observation")
-  _status=$(echo -E "$result" | jq -r ".status")
-  if [[ $_status != "success" ]]; then
-    echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
-    return 1
-  fi
+  if $CHAT_TERMINAL_USE_REPLY; then
+    result=$(_query_reply "$exec_command" "$observation")
+    _status=$(echo -E "$result" | jq -r ".status")
+    if [[ $_status != "success" ]]; then
+      echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
+      return 1
+    fi
 
-  reply=$(echo -E "$result" | jq -r '.payload.reply')
-  _print_response "Reply" "$reply"
+    reply=$(echo -E "$result" | jq -r '.payload.reply')
+    _print_response "Reply" "$reply"
+  fi
 }
 
 chat-terminal-reset() {

@@ -25,9 +25,41 @@ $ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
 
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
 
-Note: You may use other text completion endpoints other than `openai`, such as `llama-cpp` and `ollama`. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
+Note: You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
 ## Text Completion Endpoint
+
+The following text completion endpoints are supported:
+
+- [Ollama](#ollama)
+- [Llama-cpp](#llama-cpp)
+- [OpenAI](#openai)
+- [Anthropic](#anthropic)
+
+### Ollama
+
+Change the endpoint to `ollama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use ollama for text completion.
+
+```yaml
+chat_terminal:
+  endpoint: ollama
+```
+
+Make sure the `server_url` is correct and the `model` is locally available.
+
+```yaml
+text_completion_endpoints:
+  ollama:
+    server_url: "http://127.0.0.1:11434"
+    model: "llama3.1"
+    # ... other configuration options
+```
+
+You can get Ollama [here](https://ollama.com/download). And pull `llama3.1` with:
+
+```shell
+$ ollama pull llama3.1
+```
 
 ### Llama-cpp
 
@@ -69,30 +101,11 @@ text_completion_endpoints:
 
 For how to get an API key, see [Quickstart tutorial - OpenAI API](https://platform.openai.com/docs/quickstart).
 
-### Ollama
+### Anthropic
 
-Change the endpoint to `ollama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use ollama for text completion.
+Setup of Anthropic is similar to [OpenAI](#openai). The name of the endpoint is `anthropic`. The API key is stored in environment variable `ANTHROPIC_API_KEY`, or in credential file `~/.config/chat-terminal/credentials/anthropic.yaml`.
 
-```yaml
-chat_terminal:
-  endpoint: ollama
-```
-
-Make sure the `server_url` is correct and the `model` is locally available.
-
-```yaml
-text_completion_endpoints:
-  ollama:
-    server_url: "http://127.0.0.1:11434"
-    model: "llama3.1"
-    # ... other configuration options
-```
-
-You can get Ollama [here](https://ollama.com/download). And pull `llama3.1` with:
-
-```shell
-$ ollama pull llama3.1
-```
+For how to get an API key, see [Build with Claude \\ Anthropic](https://www.anthropic.com/api).
 
 ## Start Chat Terminal Server at Startup
 
@@ -112,3 +125,34 @@ Finally, enable (and start) the service with:
 $ systemctl --user daemon-reload
 $ systemctl --user enable --now chat-terminal-server.service
 ```
+
+## Shell Client Options
+
+The following environment variables can be used to configure the shell client:
+
+```shell
+CHAT_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the chat-terminal-server
+CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
+CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution, use with CHAT_TERMINAL_USE_BLACKLIST
+CHAT_TERMINAL_ENDPOINT=  # text completion endpoints, default is specified in the server config file
+CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
+```
+
+## Chat Terminal Server Options
+
+Options for the chat terminal server are defined in the `chat_terminal` section in the config file `~/.config/chat-terminal/configs/chat_terminal.yaml`.
+
+```yaml
+chat_terminal:
+  endpoint: "local-llama"  # text completion endpoint
+  prompt: "prompts/chat-terminal.mext"  # prompt template
+  use_thinking: True  # think before composing the command or not (chain of thought)
+  max_observation_length: 1024  # in tokens, truncate the output of command to this length before asking for a reply
+
+  user: "User"  # name of the user
+  agent: "Assistant"  # name of the agent
+```
+
+## About Prompt Template
+
+[Mext](https://github.com/Donny-Hikari/mext) is a powerful text template language designed for crafting prompts for LLM. It is used for composing the prompt template.

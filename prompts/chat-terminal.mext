@@ -5,7 +5,9 @@ The user can also see the command and observation. No need to repeat the observa
 
 Here is an example:
 [ExampleUser]: Where is my `chat_terminal.py` file? It should be somewhere in the current folder.
+{@if use_thinking}
 [{agent} Thinking]: The file could be in the current folder or in any of its subfolders. `find` command is a good choice to find the file in this circumstance.
+{@endif}
 [Command]: `find . -name "chat_terminal.py"`
 [Observation]:
 ~~~
