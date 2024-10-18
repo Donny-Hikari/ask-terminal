@@ -4,6 +4,7 @@ import requests
 import os
 import time
 import logging
+import math
 
 
 class TextCompletionBase:
@@ -16,6 +17,36 @@ class TextCompletionBase:
   def create(self, *args, **kwargs):
     raise NotImplementedError
 
+  def _truncate_count_tokens(self, content):
+    return len(self.tokenize(content))
+
+  def truncate(self, content, target_num, truncated_indicator, front_ratio=0.5, return_is_truncated=False):
+    if self._truncate_count_tokens(content) <= target_num:
+      if return_is_truncated:
+        return content, False
+      else:
+        return content
+
+    l = 0; r = len(content)
+    while l < r:
+      m = (l+r)>>1
+      front = int(m*front_ratio)
+      rear = m - front
+      num_tokens = self._truncate_count_tokens(content[:front] + truncated_indicator + content[-rear:])
+      if num_tokens < target_num:
+        l = m+1
+      else:
+        r = m
+    front = int(l*front_ratio)
+    rear = l - front
+    res = content[:front] + truncated_indicator + content[-rear:]
+
+    if return_is_truncated:
+      return res, True
+    else:
+      return res
+
+
 class LLamaTextCompletion(TextCompletionBase):
   def __init__(self, server_url, logger=None):
     self.server_url = server_url
@@ -27,7 +58,7 @@ class LLamaTextCompletion(TextCompletionBase):
     }
 
     res = requests.post(f"{self.server_url}/tokenize", json=data)
-    return len(json.loads(res.content)['tokens'])
+    return json.loads(res.content)['tokens']
 
   def create(self,
            prompt=None, params={},
@@ -202,15 +233,7 @@ class OllamaTextCompletion(TextCompletionBase):
     self.logger = logger
 
   def tokenize(self, content):
-    data = {
-      'model': self.model_name,
-      'input': content,
-    }
-
-    raw_res = requests.post(f"{self.server_url}/api/embed", json=data)
-    res = json.loads(raw_res.content)
-
-    return len(res['embeddings'][0])
+    raise NotImplementedError  # too bad ollama doesn't support tokenziation for now
 
   def create(self, prompt, params={}, cb=None):
     req = {
@@ -249,3 +272,23 @@ class OllamaTextCompletion(TextCompletionBase):
 
     return reply
 
+  def count_tokens(self, content, truncate=True):
+    data = {
+      'model': self.model_name,
+      'input': content,
+      'truncate': truncate,
+    }
+
+    raw_res = requests.post(f"{self.server_url}/api/embed", json=data)
+    res = json.loads(raw_res.content)
+
+    if 'error' in res:
+      raise RuntimeError(res['error'])
+
+    return res['prompt_eval_count']
+
+  def _truncate_count_tokens(self, content):
+    try:
+      return self.count_tokens(content, truncate=False)
+    except Exception:
+      return math.inf

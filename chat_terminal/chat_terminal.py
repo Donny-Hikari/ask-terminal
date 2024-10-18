@@ -1,12 +1,13 @@
 import logging
 import os
+import math
 from typing import List
 
 import yaml
 from mext import Mext
 from pydantic import BaseModel
 
-from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion, AnthropicTextCompletion, OllamaTextCompletion, truncate
+from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion, AnthropicTextCompletion, OllamaTextCompletion
 from .utils import search_config_file, LOG_HEAVY
 from .settings import Settings
 
@@ -25,6 +26,9 @@ class ChatHistoryItem(BaseModel):
   observation_received: bool = False
 
 class ChatTerminal:
+  TRUNCATED_INDICATOR = "<...TRUNCATED...>"
+  TRUNCATE_FRONT_RATIO = 0.3
+
   def __init__(self, settings: Settings):
     self._logger = _logger
     self._logger.debug(str(settings))
@@ -162,7 +166,12 @@ class ChatTerminal:
 
   def query_reply(self, command_refused, observation="", env={}, cb=None):
     self._history[-1].command_refused = command_refused
-    self._history[-1].observation = observation
+    self._history[-1].observation = self._tc.truncate(
+      observation,
+      self._configs.max_observation_length,
+      truncated_indicator=ChatTerminal.TRUNCATED_INDICATOR,
+      front_ratio=ChatTerminal.TRUNCATE_FRONT_RATIO,
+    )
     self._history[-1].observation_received = True
 
     with self._context_mgr.use_params(**env):
