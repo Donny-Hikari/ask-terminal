@@ -8,6 +8,33 @@ CHAT_TERMINAL_ENDPOINT=
 _conversation_id=
 _MESSAGE_PREFIX="%"
 
+
+# handy functions
+
+_print_response() {
+  echo "$1> $2"
+}
+
+_advance_read() {
+  if [[ -n $BASH_VERSION ]]; then
+    read -e "$@"
+  elif [[ -n $ZSH_VERSION ]]; then
+    vared -e "$@"
+  else
+    read "$@"
+  fi
+}
+
+# APIs
+
+_get_env() {
+  local shell_name="${SHELL##*/}"
+
+  echo "{ \
+    \"shell\": \"$shell_name\" \
+  }"
+}
+
 _curl_server() {
   local url="$1"
   local data="$2"
@@ -16,14 +43,6 @@ _curl_server() {
     -X POST "${CHAT_TERMINAL_SERVER_URL}${url}" \
     -H "Content-Type: application/json" \
     -d "$data"
-}
-
-_get_env() {
-  local shell_name="${SHELL##*/}"
-
-  echo "{ \
-    \"shell\": \"$shell_name\" \
-  }"
 }
 
 _init_conversation() {
@@ -62,9 +81,7 @@ _query_reply() {
   _curl_server "/chat/${_conversation_id}/query_reply" "$data"
 }
 
-_print_response() {
-  echo "$1> $2"
-}
+# core functions
 
 _confirm_command_execution() {
   echo -n $_MESSAGE_PREFIX "Execute the command? (y/[N]) "
@@ -135,7 +152,7 @@ _chat_once() {
       (tail -n +1 -f $memfile) &
     fi
     display_job=$!
-    eval "$_command" 2>&1 1>$memfile
+    eval "$_command" 1>$memfile 2>&1
     sleep 1  # wait for tail to display all contents
     if [[ -n $BASH_VERSION ]]; then
       { kill $display_job && wait $display_job; } 2>/dev/null
@@ -145,6 +162,8 @@ _chat_once() {
     observation=$(cat $memfile)
     rm $memfile
     echo $_MESSAGE_PREFIX "Command finished"
+  else
+    _advance_read -p "Clarification: " observation
   fi
 
   result=$(_query_reply "$exec_command" "$observation")
@@ -190,14 +209,7 @@ chat-terminal() {
     _chat_once "$query"
   else
     while true; do
-      if [[ -n $BASH_VERSION ]]; then
-        read -e -p "> " query
-      elif [[ -n $ZSH_VERSION ]]; then
-        query=
-        vared -e -p "> " query
-      else
-        echo -n "> " && read query
-      fi
+      _advance_read -p "> " query
       if [[ $? -eq 1 ]]; then
         # EOF
         break

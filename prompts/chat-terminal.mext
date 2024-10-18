@@ -25,7 +25,7 @@ Conversation with {user}:
 [Command]: {item.command}
   {@endif}
   {@if item.command_refused}
-[Observation]: The command is refused by the user.
+[Observation]: The command is refused by the user.{@if not empty item.observation} Reason: {item.observation}{@endif}
   {@else}
     {@if item.observation_received}
 [Observation]:{@if empty item.observation} The command has no output.{@else}
