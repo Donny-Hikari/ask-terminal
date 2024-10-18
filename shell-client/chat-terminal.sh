@@ -19,7 +19,7 @@ _advance_read() {
   if [[ -n $BASH_VERSION ]]; then
     read -e "$@"
   elif [[ -n $ZSH_VERSION ]]; then
-    vared -e "$@"
+    vared -h -e "$@"
   else
     read "$@"
   fi
@@ -152,6 +152,13 @@ _chat_once() {
       (tail -n +1 -f $memfile) &
     fi
     display_job=$!
+    if [[ -n $BASH_VERSION ]]; then
+      history -s "$_command"
+    elif [[ -n $ZSH_VERSION ]]; then
+      print -s "$_command"
+    else
+      history -s "$_command"
+    fi
     eval "$_command" 1>$memfile 2>&1
     sleep 1  # wait for tail to display all contents
     if [[ -n $BASH_VERSION ]]; then
@@ -209,6 +216,7 @@ chat-terminal() {
     _chat_once "$query"
   else
     while true; do
+      query=  # clear variable
       _advance_read -p "> " query
       if [[ $? -eq 1 ]]; then
         # EOF
