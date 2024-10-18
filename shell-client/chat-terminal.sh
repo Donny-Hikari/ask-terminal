@@ -39,10 +39,16 @@ _curl_server() {
   local url="$1"
   local data="$2"
 
+  # dump data to memory file to avoid overwhelming argument list
+  local data_memfile="$(mktemp /dev/shm/chat-terminal-curl-XXXXXX)"
+  echo -nE "$data" >$data_memfile
+
   curl -s \
     -X POST "${CHAT_TERMINAL_SERVER_URL}${url}" \
     -H "Content-Type: application/json" \
-    -d "$data"
+    -d @"$data_memfile"
+
+  rm $data_memfile
 }
 
 _init_conversation() {
