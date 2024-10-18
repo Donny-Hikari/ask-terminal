@@ -6,7 +6,7 @@ import yaml
 from mext import Mext
 from pydantic import BaseModel
 
-from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion, OllamaTextCompletion
+from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion, AnthropicTextCompletion, OllamaTextCompletion, truncate
 from .utils import search_config_file, LOG_HEAVY
 from .settings import Settings
 
@@ -33,7 +33,6 @@ class ChatTerminal:
     self._user = self._configs.user
     self._agent = self._configs.agent
 
-    tc_logger = logging.getLogger('text-completion')
     text_completion_endpoints = settings.text_completion_endpoints
     self._tc_endpoint = self._configs.endpoint
     if self._tc_endpoint not in text_completion_endpoints:
@@ -41,35 +40,7 @@ class ChatTerminal:
     self._tc_cfg = text_completion_endpoints[self._tc_endpoint]
     self._tc_params = self._tc_cfg.get('params', {})
 
-    if self._tc_endpoint == 'local-llama':
-      self._tc = LLamaTextCompletion(
-        server_url=self._tc_cfg['server_url'],
-        logger=tc_logger,
-      )
-    elif self._tc_endpoint == 'openai':
-      api_key = None
-      creds_file = self._tc_cfg.get('credentials', None)
-      if creds_file:
-        openai_creds_path = search_config_file(creds_file)
-        with open(openai_creds_path) as f:
-          openai_creds = yaml.safe_load(f)
-          api_key = openai_creds.get('api_key', None)
-
-      self._tc = OpenAITextCompletion(
-        model_name=self._tc_cfg['model'],
-        api_key=api_key,
-        logger=tc_logger,
-      )
-    elif self._tc_endpoint == 'ollama':
-      self._tc = OllamaTextCompletion(
-        server_url=self._tc_cfg['server_url'],
-        model_name=self._tc_cfg['model'],
-        logger=tc_logger,
-      )
-    else:
-      raise ValueError(f"Invalid endpoint '{self._tc_endpoint}'")
-
-    self._logger.info(f"Using endpoint '{self._tc_endpoint}' for text completion")
+    self._initialize_endpoint()
 
     self._roles = [
       f"{self._user}",
@@ -90,6 +61,53 @@ class ChatTerminal:
       shell="bash",  # default using bash
     )
     self._history: List[ChatHistoryItem] = []
+
+  def _initialize_endpoint(self):
+    tc_logger = logging.getLogger('text-completion')
+    self._tc_logger = tc_logger
+
+    def load_api_key():
+      api_key = None
+      creds_file = self._tc_cfg.get('credentials', None)
+
+      if creds_file:
+        creds_path = search_config_file(creds_file)
+        with open(creds_path, 'r') as f:
+          creds = yaml.safe_load(f)
+          api_key = creds.get('api_key', None)
+
+      return api_key
+
+    if self._tc_endpoint == 'ollama':
+      self._tc = OllamaTextCompletion(
+        server_url=self._tc_cfg['server_url'],
+        model_name=self._tc_cfg['model'],
+        logger=tc_logger,
+      )
+    elif self._tc_endpoint == 'local-llama':
+      self._tc = LLamaTextCompletion(
+        server_url=self._tc_cfg['server_url'],
+        logger=tc_logger,
+      )
+    elif self._tc_endpoint == 'openai':
+      api_key = load_api_key()
+      self._tc = OpenAITextCompletion(
+        model_name=self._tc_cfg['model'],
+        api_key=api_key,
+        logger=tc_logger,
+      )
+    elif self._tc_endpoint == 'anthropic':
+      api_key = load_api_key()
+      self._tc = AnthropicTextCompletion(
+        model_name=self._tc_cfg['model'],
+        api_key=api_key,
+        logger=tc_logger,
+        initial_system_msg=self._tc_cfg.get('initial_system_msg', None),
+      )
+    else:
+      raise ValueError(f"Invalid endpoint '{self._tc_endpoint}'")
+
+    self._logger.info(f"Using endpoint '{self._tc_endpoint}' for text completion")
 
   def _get_stop_from_role(self, role: str):
     return self._roles_hint

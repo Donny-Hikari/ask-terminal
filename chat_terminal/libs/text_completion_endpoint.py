@@ -5,7 +5,18 @@ import os
 import time
 import logging
 
-class LLamaTextCompletion:
+
+class TextCompletionBase:
+  def __init__(self, *args, **kwargs):
+    pass
+
+  def tokenize(self, content):
+    raise NotImplementedError
+
+  def create(self, *args, **kwargs):
+    raise NotImplementedError
+
+class LLamaTextCompletion(TextCompletionBase):
   def __init__(self, server_url, logger=None):
     self.server_url = server_url
     self.logger = logger
@@ -51,7 +62,7 @@ class LLamaTextCompletion:
 
     return reply
 
-class OpenAITextCompletion:
+class OpenAITextCompletion(TextCompletionBase):
   MAX_STOPS = 4
 
   def __init__(self, model_name, api_key=None, logger: logging.Logger=None, initial_system_msg=None):
@@ -68,8 +79,14 @@ class OpenAITextCompletion:
     return self.tokenizer.tokenize(content)
 
   def create(self,
-           messages=None, params={}, prompt=None,
+           messages=None, params={ 'stream': True }, prompt=None,
            cb=None, max_retries=5):
+    """
+    params
+    -------------
+    max_retries: <= 0 means forever
+    """
+
     if messages is None:
       messages = []
       if self.initial_system_msg is not None:
@@ -82,16 +99,21 @@ class OpenAITextCompletion:
 
     reply = ''
     n_retries = 0
-    while n_retries < max_retries:
+    while max_retries <= 0 or n_retries < max_retries:
       n_retries += 1
       try:
         response = self.client.chat.completions.create(
           **params,
           model=self.model_name,
           messages=messages,
-          stream=True,
         )
-        for chunk in response:
+        if not params.get('stream', False):
+          reply = response.choices[0].message.content
+          stop = response.choices[0].finish_reason is not None
+          if cb is not None:
+            cb(content=reply, stop=stop, res=response)
+        else:
+          for chunk in response:
             content = chunk.choices[0].delta.content
             stop = chunk.choices[0].finish_reason is not None
             if not stop:
@@ -99,22 +121,96 @@ class OpenAITextCompletion:
             if cb is not None:
               cb(content=content, stop=stop, res=chunk)
         break
-      except openai.RateLimitError as e:
-        if n_retries == 1:
-          if self.logger:
-            self.logger.warning("Encounter rate limit.")
-        elif n_retries == max_retries:
+      except Exception as e:
+        if n_retries >= max_retries:
           raise e
+        elif n_retries == 1:
+          if self.logger:
+            if type(e) == openai.RateLimitError:
+              self.logger.warning("Encounter rate limit, retrying.")
+            else:
+              self.logger.warning(f"Encounter unknown error, retrying: {str(e)}")
         # wait 1 5 13 29 60 120 ...
         time.sleep(int(4.5*(1.94**n_retries)-3))
 
     return reply
 
-class OllamaTextCompletion:
+class AnthropicTokenizer:
+  def tokenize(self, text):
+    from langchain_community.utilities.anthropic import get_token_ids_anthropic
+    return get_token_ids_anthropic(text)
+
+class AnthropicTextCompletion(TextCompletionBase):
+  def __init__(self, model_name, api_key=None, logger=None, initial_system_msg: str=None):
+    from anthropic import Anthropic
+
+    self.model_name = model_name
+    self.logger = logger
+    self.tokenizer = AnthropicTokenizer()
+    self.client = Anthropic(api_key=api_key)
+    self.initial_system_msg = initial_system_msg
+
+  def tokenize(self, content):
+    return self.tokenizer.tokenize(content)
+
+  def create(self,
+           messages=None, params={}, prompt=None,
+           cb=None):
+    import anthropic
+
+    system_prompt = anthropic.NOT_GIVEN
+
+    if messages is None:
+      if self.initial_system_msg is not None:
+        system_prompt = self.initial_system_msg
+
+      messages = []
+      messages.append({ "role": "user", "content": prompt })
+    else:
+      user_ai_messages = []
+      for m in messages:
+        if 'role' in m and m['role'] == 'system':
+          if system_prompt is anthropic.NOT_GIVEN:
+            system_prompt = m['content']
+          else:
+            raise ValueError("Anthropic does not accept more than one system message.")
+        else:
+          user_ai_messages.append(m)
+      messages = user_ai_messages
+
+    reply = ''
+    response = self.client.messages.create(
+      **params,
+      model=self.model_name,
+      messages=messages,
+      system=system_prompt,
+    )
+    if not params.get('stream', False):
+      reply = response.content[0].text
+      stop = response.stop_reason is not None
+      if cb is not None:
+        cb(content=reply, stop=stop, res=response)
+    else:
+      raise NotImplementedError
+
+    return reply
+
+class OllamaTextCompletion(TextCompletionBase):
   def __init__(self, server_url, model_name, logger=None):
     self.server_url = server_url
     self.model_name = model_name
     self.logger = logger
+
+  def tokenize(self, content):
+    data = {
+      'model': self.model_name,
+      'input': content,
+    }
+
+    raw_res = requests.post(f"{self.server_url}/api/embed", json=data)
+    res = json.loads(raw_res.content)
+
+    return len(res['embeddings'][0])
 
   def create(self, prompt, params={}, cb=None):
     req = {

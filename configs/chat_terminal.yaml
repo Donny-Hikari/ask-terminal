@@ -6,6 +6,9 @@ chat_terminal:
   agent: "Assistant"
 
 text_completion_endpoints:
+  ollama:
+    server_url: "http://127.0.0.1:11434"
+    model: "llama3.1"
   local-llama:
     server_url: "http://127.0.0.1:40080"
     params:
@@ -17,7 +20,5 @@ text_completion_endpoints:
         - "[INST]"
   openai:
     model: "gpt-3.5-turbo"
-  ollama:
-    server_url: "http://127.0.0.1:11434"
-    model: "llama3.1"
-
+  anthropic:
+    model: "claude-3-haiku"
