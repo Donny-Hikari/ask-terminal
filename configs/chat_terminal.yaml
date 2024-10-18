@@ -1,7 +1,7 @@
 chat_terminal:
   endpoint: "openai"
   prompt: "prompts/chat-terminal.mext"
-  max_observation_length: 1024  # tokens
+  max_observation_tokens: 1024
 
   user: "User"
   agent: "Assistant"

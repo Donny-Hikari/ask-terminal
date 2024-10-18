@@ -7,7 +7,8 @@ class SettingsChatTerminal(BaseModel):
   endpoint: str = "local-llama"
   prompt: str = "prompts/chat-terminal.mext"
   use_thinking: bool = True
-  max_observation_length: int = 1024  # tokens
+  max_observation_tokens: int = 1024
+  max_reply_tokens: int = 2048
 
   user: str = "User"
   agent: str = "Assistant"

@@ -147,7 +147,8 @@ chat_terminal:
   endpoint: "local-llama"  # text completion endpoint
   prompt: "prompts/chat-terminal.mext"  # prompt template
   use_thinking: True  # think before composing the command or not (chain of thought)
-  max_observation_length: 1024  # in tokens, truncate the output of command to this length before asking for a reply
+  max_observation_tokens: 1024  # truncate the output of command to this length before asking for a reply
+  max_reply_tokens: 2048  # the maximum number of tokens to generate for a reply
 
   user: "User"  # name of the user
   agent: "Assistant"  # name of the agent

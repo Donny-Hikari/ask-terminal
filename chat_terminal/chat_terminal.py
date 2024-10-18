@@ -118,13 +118,14 @@ class ChatTerminal:
   def _get_stop_from_role(self, role: str):
     return self._roles_hint
 
-  def chat(self, gen_role, stop=[], cb=None):
+  def chat(self, gen_role, stop=[], additional_params={}, cb=None):
     prompt = self._context_mgr.compose(
       gen_role=gen_role,
       history=self._history,
     )
     params = {
       **self._tc_params,
+      **additional_params,
       "stop": self._tc_params.get("stop", []) + stop,
     }
 
@@ -170,18 +171,33 @@ class ChatTerminal:
     self._history[-1].command_refused = command_refused
     self._history[-1].observation = self._tc.truncate(
       observation,
-      self._configs.max_observation_length,
+      self._configs.max_observation_tokens,
       truncation_indicator=ChatTerminal.TRUNCATION_INDICATOR,
       front_ratio=ChatTerminal.TRUNCATION_FRONT_RATIO,
       coarse_gap=ChatTerminal.TRUNCATION_COARSE_GAP,  # approximately 1/3 speed up if coarse gap is 16 and max observation length is 4096
     )
     self._history[-1].observation_received = True
 
+    additional_params = {}
+    if self._configs.max_reply_tokens > 0:
+      key = ''
+      if self._tc_endpoint == 'ollama':
+        key = 'num_predict'
+      elif self._tc_endpoint == 'llama-cpp':
+        key = 'max_tokens'
+      elif self._tc_endpoint == 'openai':
+        key = 'max_tokens'
+      elif self._tc_endpoint == 'anthropic':
+        key = 'max_tokens'
+
+      additional_params[key] = self._configs.max_reply_tokens
+
     with self._context_mgr.use_params(**env):
       gen_role = f"{self._agent}"
       reply = self.chat(
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
+        additional_params=additional_params,
         cb=cb,
       )
       self._history[-1].reply = reply
