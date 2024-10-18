@@ -25,7 +25,7 @@ $ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
 
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
 
-Note: You may use other text completion endpoints other than `openai`, such as `llama-cpp`. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
+Note: You may use other text completion endpoints other than `openai`, such as `llama-cpp` and `ollama`. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
 ## Text Completion Endpoint
 
@@ -49,7 +49,7 @@ chat_terminal:
   endpoint: openai
 ```
 
-You may pass your API key via environment variable `OPENAI_API_KEY`, or use a credential file at `~/.config/chat-terminal/credentials/openai.yaml`.
+You may set your API key via environment variable `OPENAI_API_KEY`, or use a credential file at `~/.config/chat-terminal/credentials/openai.yaml`.
 
 To use credential file, first create it with the following content:
 
@@ -68,6 +68,31 @@ text_completion_endpoints:
 ```
 
 For how to get an API key, see [Quickstart tutorial - OpenAI API](https://platform.openai.com/docs/quickstart).
+
+### Ollama
+
+Change the endpoint to `ollama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use ollama for text completion.
+
+```yaml
+chat_terminal:
+  endpoint: ollama
+```
+
+Make sure the `server_url` is correct and the `model` is locally available.
+
+```yaml
+text_completion_endpoints:
+  ollama:
+    server_url: "http://127.0.0.1:11434"
+    model: "llama3.1"
+    # ... other configuration options
+```
+
+You can get Ollama [here](https://ollama.com/download). And pull `llama3.1` with:
+
+```shell
+$ ollama pull llama3.1
+```
 
 ## Start Chat Terminal Server at Startup
 
