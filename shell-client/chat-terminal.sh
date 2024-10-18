@@ -12,7 +12,7 @@ _MESSAGE_PREFIX="%"
 # handy functions
 
 _print_response() {
-  echo "$1> $2"
+  echo -E "$1> $2"
 }
 
 _advance_read() {
@@ -38,17 +38,24 @@ _get_env() {
 _curl_server() {
   local url="$1"
   local data="$2"
+  local data_memfile=
+  local data_source="$data"
 
-  # dump data to memory file to avoid overwhelming argument list
-  local data_memfile="$(mktemp /dev/shm/chat-terminal-curl-XXXXXX)"
-  echo -nE "$data" >$data_memfile
+  if [[ ${#data} -gt 10240 ]]; then
+    # dump data to memory file to avoid overwhelming argument list
+    data_memfile="$(mktemp /dev/shm/chat-terminal-curl-XXXXXX)"
+    echo -nE "$data" >$data_memfile
+    data_source="@""$data_memfile"
+  fi
 
   curl -s \
     -X POST "${CHAT_TERMINAL_SERVER_URL}${url}" \
     -H "Content-Type: application/json" \
-    -d @"$data_memfile"
+    -d "$data_source"
 
-  rm $data_memfile
+  if [[ -n $data_memfile ]]; then
+    rm $data_memfile
+  fi
 }
 
 _init_conversation() {
@@ -130,7 +137,7 @@ _chat_once() {
 
   exec_command=false
   if [[ "$CHAT_TERMINAL_USE_BLACKLIST" == "true" ]]; then
-    echo "$_command" | grep -qE "$CHAT_TERMINAL_BLACKLIST_PATTERN"
+    echo -E "$_command" | grep -qE "$CHAT_TERMINAL_BLACKLIST_PATTERN"
     if [[ $? -ne 0 ]]; then
       exec_command=true
     else
