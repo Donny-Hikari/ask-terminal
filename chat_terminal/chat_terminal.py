@@ -6,7 +6,7 @@ import yaml
 from mext import Mext
 from pydantic import BaseModel
 
-from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion
+from .libs.text_completion_endpoint import LLamaTextCompletion, OpenAITextCompletion, OllamaTextCompletion
 from .utils import search_config_file, LOG_HEAVY
 from .settings import Settings
 
@@ -60,6 +60,14 @@ class ChatTerminal:
         api_key=api_key,
         logger=tc_logger,
       )
+    elif self._tc_endpoint == 'ollama':
+      self._tc = OllamaTextCompletion(
+        server_url=self._tc_cfg['server_url'],
+        model_name=self._tc_cfg['model'],
+        logger=tc_logger,
+      )
+    else:
+      raise ValueError(f"Invalid endpoint '{self._tc_endpoint}'")
 
     self._logger.info(f"Using endpoint '{self._tc_endpoint}' for text completion")
 
@@ -70,7 +78,7 @@ class ChatTerminal:
       "Observation",
       f"{self._agent}",
     ]
-    self._roles_hint = list(map(lambda x: f'[{x}]', self._roles))
+    self._roles_hint = list(map(lambda x: f'[{x}]:', self._roles))
 
     prompts_path = search_config_file(self._configs.prompt)
     self._context_mgr = Mext()

@@ -43,7 +43,7 @@ copy-prompts:
 	cp $(COPY_FLAG) prompts $(CONFIGS_DIR)
 
 copy-configs:
-	cp $(COPY_FLAG) $(CONFIG_FILE_SOURCE) $(CONFIGS_DIR)
+	cp $(COPY_FLAG) $(CONFIG_FILE_SOURCE) $(CONFIGS_DIR)/configs
 
 copy-credentials:
 	[ -e credentials ] && cp $(COPY_FLAG) credentials $(CONFIGS_DIR) || true

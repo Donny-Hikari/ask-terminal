@@ -15,9 +15,9 @@ text_completion_endpoints:
       n_predict: 4096
       stop:
         - "[INST]"
-        - "[User]:"
   openai:
     model: "gpt-3.5-turbo"
-    params:
-      stop:
-        - "[User]:"
+  ollama:
+    server_url: "http://127.0.0.1:11434"
+    model: "llama3.1"
+

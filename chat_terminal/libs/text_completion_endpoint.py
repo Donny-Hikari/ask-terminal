@@ -3,6 +3,7 @@ import openai
 import requests
 import os
 import time
+import logging
 
 class LLamaTextCompletion:
   def __init__(self, server_url, logger=None):
@@ -51,7 +52,9 @@ class LLamaTextCompletion:
     return reply
 
 class OpenAITextCompletion:
-  def __init__(self, model_name, api_key=None, logger=None, initial_system_msg=None):
+  MAX_STOPS = 4
+
+  def __init__(self, model_name, api_key=None, logger: logging.Logger=None, initial_system_msg=None):
     from transformers import AutoTokenizer
     from openai import OpenAI
 
@@ -72,6 +75,10 @@ class OpenAITextCompletion:
       if self.initial_system_msg is not None:
         messages.append({ "role": "system", "content": self.initial_system_msg })
       messages.append({ "role": "user", "content": prompt })
+
+    if len(params.get('stop', [])) > (max_stops := OpenAITextCompletion.MAX_STOPS):
+      params['stop'] = params['stop'][-max_stops:]
+      self.logger.warning(f'OpenAI only supports up to {max_stops}, using only the last few ones.')
 
     reply = ''
     n_retries = 0
@@ -100,6 +107,49 @@ class OpenAITextCompletion:
           raise e
         # wait 1 5 13 29 60 120 ...
         time.sleep(int(4.5*(1.94**n_retries)-3))
+
+    return reply
+
+class OllamaTextCompletion:
+  def __init__(self, server_url, model_name, logger=None):
+    self.server_url = server_url
+    self.model_name = model_name
+    self.logger = logger
+
+  def create(self, prompt, params={}, cb=None):
+    req = {
+      'model': self.model_name,
+      'prompt': prompt,
+      'raw': True,
+      "options": params,
+    }
+
+    reply = ''
+    with requests.post(f"{self.server_url}/api/generate", json=req, stream=True) as response:
+      # Processing streaming data in chunks
+      buffer = b""  # Buffer to accumulate streamed data
+      for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+        if chunk:
+          buffer += chunk
+          try:
+            # Attempt to decode JSON from the accumulated buffer
+            res = json.loads(buffer)
+
+            if 'error' in res:
+              if self.logger:
+                self.logger.warning(f"Encounter error: {res['error']}")
+              raise RuntimeError(f"Error from server: {res['error']}")
+
+            reply += res['response']
+            if cb is not None:
+              cb(content=res['response'], stop=res['done'], res=res)
+
+            if res['done']:
+              break
+
+            buffer = b""  # Clear the buffer after processing
+          except json.JSONDecodeError:
+            pass  # Incomplete JSON, continue accumulating data
 
     return reply
 
