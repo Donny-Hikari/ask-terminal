@@ -154,10 +154,14 @@ class ChatTerminal:
       return cb(*args, **kwargs, section=section_name)
     return wrapper
 
-  async def query_command(self, query, env: ChatQueryEnvModel={}, cb=None):
+  async def query_command(self, query, env: ChatQueryEnvModel={}, stream=False, cb=None):
     self._history.append(
       ChatHistoryItem(query=query),
     )
+
+    additional_params = {
+      'stream': stream,
+    }
 
     with self._context_mgr.use_params(env=env):
       thinking = ""
@@ -166,6 +170,7 @@ class ChatTerminal:
         thinking = await self.chat(
           gen_role=gen_role,
           stop=self._get_stop_from_role(gen_role),
+          additional_params=additional_params,
           cb=ChatTerminal._add_section_info_to_query_callback(cb, "thinking"),
         )
         self._history[-1].thinking = thinking
@@ -174,6 +179,7 @@ class ChatTerminal:
       command = await self.chat(
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
+        additional_params=additional_params,
         cb=ChatTerminal._add_section_info_to_query_callback(cb, "command"),
       )
       command = command.strip('`')
@@ -184,7 +190,7 @@ class ChatTerminal:
       'command': command,
     }
 
-  async def query_reply(self, command_refused, observation="", env: ChatQueryEnvModel={}, cb=None):
+  async def query_reply(self, command_refused, observation="", env: ChatQueryEnvModel={}, stream=False, cb=None):
     self._history[-1].command_refused = command_refused
     self._history[-1].observation = await self._tc.truncate(
       observation,
@@ -195,17 +201,16 @@ class ChatTerminal:
     )
     self._history[-1].observation_received = True
 
-    additional_params = {}
+    additional_params = {
+      'stream': stream,
+    }
     if self._configs.max_reply_tokens > 0:
-      key = ''
-      if self._tc_endpoint == 'ollama':
-        key = 'num_predict'
-      elif self._tc_endpoint == 'llama-cpp':
-        key = 'max_tokens'
-      elif self._tc_endpoint == 'openai':
-        key = 'max_tokens'
-      elif self._tc_endpoint == 'anthropic':
-        key = 'max_tokens'
+      key = {
+        'ollama': 'num_predict',
+        'llama-cpp': 'max_tokens',
+        'openai': 'max_tokens',
+        'anthropic': 'max_tokens',
+      }[self._tc_endpoint]
 
       additional_params[key] = self._configs.max_reply_tokens
 

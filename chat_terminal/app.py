@@ -106,7 +106,7 @@ def conditional_query_streaming_response(num_sections=1):
           section, content, stop = await q_response.get()
           s_res = json.dumps({
             'section': section,
-            'content': content,
+            'content': content if content is not None else '',
             'finished': stop,
           }, ensure_ascii=False)
           yield s_res + '\n'
@@ -142,6 +142,7 @@ async def query_command(conversation_id: str, query: ChatQueryCommandModel, stre
     response = await conversation.query_command(
       query.message,
       env=query.env,
+      stream=query.stream,
       cb=streaming_cb,
     )
   except Exception as e:
@@ -171,6 +172,7 @@ async def query_reply(conversation_id: str, query: ChatQueryReplyModel, streamin
       command_refused=not query.command_executed,
       observation=query.message,
       env=query.env,
+      stream=query.stream,
       cb=streaming_cb,
     )
   except Exception as e:
