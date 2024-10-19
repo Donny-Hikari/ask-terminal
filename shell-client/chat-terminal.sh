@@ -150,11 +150,16 @@ _process_response_stream() {
   local res=
   local hint_printed=false
 
+  local section=
+  local finished=
+  local content=
+
   # process our stream
   while read -r line; do
     section=$(echo -E "$line" | jq -r '.section')
-    content=$(echo -E "$line" | jq -r '.content')
     finished=$(echo -E "$line" | jq -r '.finished')
+    IFS= read -rd '' content < <(echo -E "$line" | jq -r '.content')  # workaround for subshell trailing newlines trimming issue
+    content=${content%$'\n'}
 
     if [[ "$section" != "$section_name" ]]; then
       # pass on other streams
@@ -165,17 +170,17 @@ _process_response_stream() {
     if ! $hint_printed; then
       echo -n "${section_prompt}> " >&3
       if [[ "$content" =~ ^[[:space:]]* ]]; then
-        content=$(echo -nE "$content" | sed 's/^[ \t]*//')
+        IFS= read -rd '' content < <(echo -nE "$content" | sed 's/^[ \t]*//')
       fi
       hint_printed=true
     fi
     res+="$content"
-    echo -nE "$content" >&3
+    echo -ne "$content" >&3
     if $finished; then
       break
     fi
   done
-  if $hint_printed; then
+  if $hint_printed && [[ ! "$res" =~ $'\n'$ ]]; then
     echo >&3
   fi
 
