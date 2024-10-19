@@ -168,10 +168,15 @@ _process_response_stream() {
     fi
 
     if ! $hint_printed; then
-      echo -n "${section_prompt}> " >&3
-      if [[ "$content" =~ ^[[:space:]]* ]]; then
-        IFS= read -rd '' content < <(echo -nE "$content" | sed 's/^[ \t]*//')
+      # remove leading spaces and newlines
+      IFS= read -rd '' content < <(echo -nE "$content" | sed 's/^[[:space:]]*//')
+      IFS= read -rd '' content < <(echo -ne "$content" | sed '1,/[^[:space:]]/{/^$/d}')
+
+      if [[ -z "$content" ]]; then
+        continue
       fi
+
+      echo -n "${section_prompt}> " >&3
       hint_printed=true
     fi
     res+="$content"

@@ -7,39 +7,45 @@ OS: {env.os}
 Shell: {env.shell}
 
 Here is an example:
-[ExampleUser]: Where is my `chat_terminal.py` file? It should be somewhere in the current folder.
+%role%[ExampleUser]: Where is my `chat_terminal.py` file? It should be somewhere in the current folder.
 {@if use_thinking}
-[{agent}/Thinking]: The file could be in the current folder or in any of its subfolders. `find` command is a good choice to find the file in this circumstance.
+%role%[{agent}/Thinking]: The file could be in the current folder or in any of its subfolders. `find` command is a good choice to find the file in this circumstance.
 {@endif}
-[Command]: find . -name "chat_terminal.py"
-[Observation]:
+%role%[Command]: find . -name "chat_terminal.py"
+%role%[Observation]:
 ~~~
 ./chat_terminal/chat_terminal.py
 ./chat_terminal/main.py
 ./pyproject.toml
 ~~~
-[{agent}]: The path of `chat_terminal.py` is "./chat_terminal/chat_terminal.py".
+%role%[{agent}]:
+~~~
+The path of `chat_terminal.py` is "./chat_terminal/chat_terminal.py".
+~~~
 
 Conversation with {user}:
 {@for item in history}
-[{user}]: {item.query}
+%role%[{user}]: {item.query}
   {@if not empty item.thinking}
-[{agent}/Thinking]: {item.thinking}
+%role%[{agent}/Thinking]: {item.thinking}
   {@endif}
   {@if not empty item.command}
-[Command]: {item.command}
+%role%[Command]: {item.command}
   {@endif}
   {@if item.command_refused}
-[Observation]: The command is refused by the user.{@if not empty item.observation} Reason: {item.observation}{@endif}
+%role%[Observation]: The command is refused by the user.{@if not empty item.observation} Reason: {item.observation}{@endif}
   {@else}
     {@if item.observation_received}
-[Observation]:{@if empty item.observation} The command has no output.{@else}
+%role%[Observation]:{@if empty item.observation} The command has no output.{@else}
 {@format fenced_block item.observation marker="~"}
       {@endif}
     {@endif}
   {@endif}
   {@if not empty item.reply}
-[{agent}]: {item.reply}
+%role%[{agent}]:
+{@format fenced_block item.reply marker="~"}
   {@endif}
 {@endfor}
-[{gen_role}]:
+%role%[{gen_role}]:
+{@default prefix ""}
+{prefix}

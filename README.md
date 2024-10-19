@@ -2,6 +2,25 @@
 
 Chat with your terminal and get things done using natural language with the help of LLM (Large Language Model).
 
+## Examples
+
+```shell
+$ ask which program is using the most cpu resource
+% Initialized conversation: 35b95f19-2fda-4bda-970e-f1240234c5f2
+Thoughts> This is a classic question to determine resource usage. We can use `top` command to get real-time data, or use `ps` and `grep` commands to find out the process with the highest CPU usage.
+Command> ps -eo %cpu,pid,comm | sort -k 1 -rn
+% Execute the command? (y/[N]) y
+2337567 ollama_llama_se 21.2
+2025836 ollama_llama_se  3.6
+2104826 code             2.7
+2104513 code             2.4
+   3777 firefox          1.3
+2322053 code             1.2
+<...OMITTED...>
+% Command finished
+Reply> The program using the most cpu resource is "ollama_llama_se". Its pid and percentage of cpu usage are 2337567 and 21.2 respectively.
+```
+
 ## Installation
 
 First setup with this command:

@@ -60,7 +60,7 @@ class ChatTerminal:
       "Observation",
       f"{self._agent}",
     ]
-    self._roles_hint = list(map(lambda x: f'[{x}]:', self._roles))
+    self._roles_hint = [r'%role%[']
 
     prompts_path = search_config_file(self._configs.prompt)
     self._context_mgr = Mext()
@@ -209,11 +209,11 @@ class ChatTerminal:
 
       additional_params[key] = self._configs.max_reply_tokens
 
-    with self._context_mgr.use_params(env=env):
+    with self._context_mgr.use_params(env=env, prefix="~~~"):
       gen_role = f"{self._agent}"
       reply = await self.chat(
         gen_role=gen_role,
-        stop=self._get_stop_from_role(gen_role),
+        stop=self._get_stop_from_role(gen_role) + ["~~~"],
         additional_params=additional_params,
         cb=ChatTerminal._add_section_info_to_query_callback(cb, "reply"),
       )
