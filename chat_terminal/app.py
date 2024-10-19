@@ -69,7 +69,8 @@ async def query_command(conversation_id: str, query: ChatQueryCommandModel):
 
   try:
     response = await conversation.query_command(query.message, env=query.env)
-  except Exception:
+  except Exception as e:
+    _logger.error(f'Error while querying command: {e}')
     return {
       "status": "error",
       "error": "Failed to communicate with upstream endpoint"
@@ -89,11 +90,18 @@ async def query_reply(conversation_id: str, query: ChatQueryReplyModel):
     }
   conversation = chat_pool[conversation_id]
 
-  response = await conversation.query_reply(
-    command_refused=not query.command_executed,
-    observation=query.message,
-    env=query.env,
-  )
+  try:
+    response = await conversation.query_reply(
+      command_refused=not query.command_executed,
+      observation=query.message,
+      env=query.env,
+    )
+  except Exception as e:
+    _logger.error(f'Error while querying command: {e}')
+    return {
+      "status": "error",
+      "error": "Failed to communicate with upstream endpoint"
+    }
 
   return {
       "status": "success",

@@ -72,15 +72,19 @@ class LLamaTextCompletion(TextCompletionBase):
     self.server_url = server_url
     self.logger = logger
 
-  def tokenize(self, content):
+  async def tokenize(self, content):
     data = {
       "content": content,
     }
 
-    res = requests.post(f"{self.server_url}/tokenize", json=data)
-    return json.loads(res.content)['tokens']
+    async with aiohttp.ClientSession() as session:
+      async with session.post(f"{self.server_url}/tokenize", json=data) as raw_res:
+        raw_res.raise_for_status()
+        res = await raw_res.json(encoding='utf-8')
 
-  def create(self,
+        return res['tokens']
+
+  async def create(self,
            prompt=None, params={},
            cb=None):
     req = params
@@ -90,26 +94,29 @@ class LLamaTextCompletion(TextCompletionBase):
 
     # Creating a streaming connection with a POST request
     reply = ''
-    with requests.post(f"{self.server_url}/completion", json=req, stream=True) as response:
-      # Processing streaming data in chunks
-      buffer = ""  # Buffer to accumulate streamed data
-      for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
-        if chunk:
-          buffer += chunk
-          try:
-            # Attempt to decode JSON from the accumulated buffer
-            res = json.loads(buffer[6:])
+    async with aiohttp.ClientSession() as session:
+      async with session.post(f"{self.server_url}/completion", json=req) as response:
+        response.raise_for_status()
 
-            reply += res['content']
-            if cb is not None:
-              cb(content=res['content'], stop=res['stop'], res=res)
+        # Processing streaming data in chunks
+        buffer = b""  # Buffer to accumulate streamed data
+        async for chunk in response.content.iter_chunked(1024):
+          if chunk:
+            buffer += chunk
+            while b'\n' in buffer:
+              raw_res, buffer = buffer.split(b'\n', 1)
+              try:
+                # Attempt to decode JSON from the accumulated buffer
+                res = json.loads(raw_res.decode('utf-8')[6:])
 
-            if res['stop']:
-              break
+                reply += res['content']
+                if cb is not None:
+                  cb(content=res['content'], stop=res['stop'], res=res)
 
-            buffer = ""  # Clear the buffer after processing
-          except json.JSONDecodeError:
-            pass  # Incomplete JSON, continue accumulating data
+                if res['stop']:
+                  break
+              except json.JSONDecodeError:
+                pass  # Incomplete JSON, continue accumulating data
 
     return reply
 
@@ -132,24 +139,25 @@ class OpenAITextCompletion(TextCompletionBase):
       content=content,
     )
 
-  async def create(self,
-                    messages=None, params={ 'stream': True }, prompt=None,
-                    cb=None, max_retries=5):
+  async def create(
+      self,
+      messages=None, params={ 'stream': True }, prompt=None,
+      cb=None, max_retries=5,
+    ):
     return await asyncio.to_thread(
       self._create,
-      messages=messages,
-      params=params,
-      prompt=prompt,
-      cb=cb,
-      max_retries=max_retries,
+      messages=messages, params=params, prompt=prompt,
+      cb=cb, max_retries=max_retries,
     )
 
   def _tokenize(self, content):
     return self.tokenizer.tokenize(content)
 
-  def _create(self,
-           messages=None, params={ 'stream': True }, prompt=None,
-           cb=None, max_retries=5):
+  def _create(
+      self,
+      messages=None, params={ 'stream': True }, prompt=None,
+      cb=None, max_retries=5,
+    ):
     """
     params
     -------------
@@ -308,7 +316,6 @@ class OllamaTextCompletion(TextCompletionBase):
 
                 if res['done']:
                   break
-
               except json.JSONDecodeError:
                 pass  # Incomplete JSON, continue accumulating data
 
@@ -326,10 +333,10 @@ class OllamaTextCompletion(TextCompletionBase):
         raw_res.raise_for_status()
         res = await raw_res.json(encoding='utf-8')
 
-    if 'error' in res:
-      raise RuntimeError(res['error'])
+        if 'error' in res:
+          raise RuntimeError(res['error'])
 
-    return res['prompt_eval_count']
+        return res['prompt_eval_count']
 
   async def _truncate_count_tokens(self, content):
     try:
