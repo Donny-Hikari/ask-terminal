@@ -173,14 +173,20 @@ _process_response_stream() {
       IFS= read -rd '' content < <(echo -ne "$content" | sed '1,/[^[:space:]]/{/^$/d}')
 
       if [[ -z "$content" ]]; then
+        if $finished; then
+          echo $_MESSAGE_PREFIX "No command provided" >&3
+          break
+        fi
         continue
       fi
 
       echo -n "${section_prompt}> " >&3
       hint_printed=true
     fi
+
     res+="$content"
     echo -ne "$content" >&3
+
     if $finished; then
       break
     fi
@@ -239,20 +245,22 @@ _chat_once() {
   fi
 
   exec_command=false
-  if [[ "$CHAT_TERMINAL_USE_BLACKLIST" == "true" ]]; then
-    echo -E "$_command" | grep -qE "$CHAT_TERMINAL_BLACKLIST_PATTERN"
-    if [[ $? -ne 0 ]]; then
-      exec_command=true
+  if [[ ${#_command} -gt 0 ]]; then
+    if [[ "$CHAT_TERMINAL_USE_BLACKLIST" == "true" ]]; then
+      echo -E "$_command" | grep -qE "$CHAT_TERMINAL_BLACKLIST_PATTERN"
+      if [[ $? -ne 0 ]]; then
+        exec_command=true
+      else
+        _confirm_command_execution
+        if [[ $? -eq 0 ]]; then
+          exec_command=true
+        fi
+      fi
     else
       _confirm_command_execution
       if [[ $? -eq 0 ]]; then
         exec_command=true
       fi
-    fi
-  else
-    _confirm_command_execution
-    if [[ $? -eq 0 ]]; then
-      exec_command=true
     fi
   fi
 
@@ -260,15 +268,18 @@ _chat_once() {
     # workaround to avoid pipe and subshell to
     # ensure execution in current shell
     # use /dev/shm to avoid wearing the disk
-    memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
-    if [[ -n $BASH_VERSION ]]; then
-      { tail -n +1 -f $memfile & } 2>/dev/null
-    elif [[ -n $ZSH_VERSION ]]; then
-      (tail -n +1 -f $memfile ) &!
-    else
-      (tail -n +1 -f $memfile) &
+    if $CHAT_TERMINAL_USE_REPLY; then
+      memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
+      if [[ -n $BASH_VERSION ]]; then
+        { tail -n +1 -f $memfile & } 2>/dev/null
+      elif [[ -n $ZSH_VERSION ]]; then
+        (tail -n +1 -f $memfile ) &!
+      else
+        (tail -n +1 -f $memfile) &
+      fi
+      display_job=$!
     fi
-    display_job=$!
+
     if [[ -n $BASH_VERSION ]]; then
       history -s "$_command"
     elif [[ -n $ZSH_VERSION ]]; then
@@ -276,15 +287,24 @@ _chat_once() {
     else
       history -s "$_command"
     fi
-    eval "$_command" 1>$memfile 2>&1
-    sleep 1  # wait for tail to display all contents
-    if [[ -n $BASH_VERSION ]]; then
-      { kill $display_job && wait $display_job; } 2>/dev/null
-    elif [[ -n $ZSH_VERSION ]]; then
-      kill $display_job
+
+    if $CHAT_TERMINAL_USE_REPLY; then
+      eval "$_command" 1>$memfile 2>&1
+    else
+      eval "$_command"
     fi
-    observation=$(cat $memfile)
-    rm $memfile
+
+    if $CHAT_TERMINAL_USE_REPLY; then
+      sleep 1  # wait for tail to display all contents
+      if [[ -n $BASH_VERSION ]]; then
+        { kill $display_job && wait $display_job; } 2>/dev/null
+      elif [[ -n $ZSH_VERSION ]]; then
+        kill $display_job
+      fi
+      observation=$(cat $memfile)
+      rm $memfile
+    fi
+
     echo $_MESSAGE_PREFIX "Command finished"
   fi
 
