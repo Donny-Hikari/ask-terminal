@@ -117,7 +117,7 @@ class LLamaTextCompletion(TextCompletionBase):
 
                 reply += res['content']
                 if cb is not None:
-                  cb(content=res['content'], stop=res['stop'], res=res)
+                  await cb(content=res['content'], stop=res['stop'], res=res)
 
                 if res['stop']:
                   break
@@ -140,9 +140,8 @@ class OpenAITextCompletion(TextCompletionBase):
     self.initial_system_msg = initial_system_msg
 
   async def tokenize(self, content):
-    return await asyncio.to_thread(
-      self._tokenize,
-      content=content,
+    return await asyncio.create_task(
+      self._tokenize(content=content)
     )
 
   async def create(
@@ -150,16 +149,18 @@ class OpenAITextCompletion(TextCompletionBase):
       messages=None, params={ 'stream': True }, prompt=None,
       cb=None, max_retries=5,
     ):
-    return await asyncio.to_thread(
-      self._create,
-      messages=messages, params=params, prompt=prompt,
-      cb=cb, max_retries=max_retries,
+    return await asyncio.create_task(
+      self._create(
+        messages=messages,
+        params=params, prompt=prompt,
+        cb=cb, max_retries=max_retries,
+      )
     )
 
-  def _tokenize(self, content):
+  async def _tokenize(self, content):
     return self.tokenizer.tokenize(content)
 
-  def _create(
+  async def _create(
       self,
       messages=None, params={ 'stream': True }, prompt=None,
       cb=None, max_retries=5,
@@ -195,7 +196,7 @@ class OpenAITextCompletion(TextCompletionBase):
           reply = response.choices[0].message.content
           stop = response.choices[0].finish_reason is not None
           if cb is not None:
-            cb(content=reply, stop=stop, res=response)
+            await cb(content=reply, stop=stop, res=response)
         else:
           for chunk in response:
             content = chunk.choices[0].delta.content
@@ -203,7 +204,7 @@ class OpenAITextCompletion(TextCompletionBase):
             if not stop:
               reply += content
             if cb is not None:
-              cb(content=content, stop=stop, res=chunk)
+              await cb(content=content, stop=stop, res=chunk)
         break
       except Exception as e:
         if n_retries >= max_retries:
@@ -237,9 +238,8 @@ class AnthropicTextCompletion(TextCompletionBase):
     self.initial_system_msg = initial_system_msg
 
   async def tokenize(self, content):
-    return await asyncio.to_thread(
-      self._tokenize,
-      content=content,
+    return await asyncio.create_task(
+      self._tokenize(content=content)
     )
 
   async def create(
@@ -247,16 +247,14 @@ class AnthropicTextCompletion(TextCompletionBase):
       messages=None, params={}, prompt=None,
       cb=None,
     ):
-    return await asyncio.to_thread(
-      self._create,
-      messages=messages, params=params, prompt=prompt,
-      cb=cb,
+    return await asyncio.create_task(
+      self._create(messages=messages, params=params, prompt=prompt, cb=cb)
     )
 
-  def _tokenize(self, content):
+  async def _tokenize(self, content):
     return self.tokenizer.tokenize(content)
 
-  def _create(
+  async def _create(
       self,
       messages=None, params={}, prompt=None,
       cb=None,
@@ -303,7 +301,7 @@ class AnthropicTextCompletion(TextCompletionBase):
       reply = response.content[0].text
       stop = response.stop_reason is not None
       if cb is not None:
-        cb(content=reply, stop=stop, res=response)
+        await cb(content=reply, stop=stop, res=response)
     else:
       raise NotImplementedError
 
@@ -355,7 +353,7 @@ class OllamaTextCompletion(TextCompletionBase):
 
                 reply += res['response']
                 if cb is not None:
-                  cb(content=res['response'], stop=res['done'], res=res)
+                  await cb(content=res['response'], stop=res['done'], res=res)
 
                 if res['done']:
                   break

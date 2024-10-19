@@ -1,7 +1,9 @@
 import logging
 import os
 import math
-from typing import List, Literal, Optional
+from functools import wraps
+import asyncio
+from typing import List, Literal, Optional, Union, Coroutine, Any
 
 import yaml
 from mext import Mext
@@ -147,6 +149,7 @@ class ChatTerminal:
     if cb is None:
       return None
 
+    @wraps(cb)
     def wrapper(*args, **kwargs):
       return cb(*args, **kwargs, section=section_name)
     return wrapper

@@ -136,11 +136,14 @@ CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute 
 CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution, use with CHAT_TERMINAL_USE_BLACKLIST
 CHAT_TERMINAL_ENDPOINT=  # text completion endpoints, default is specified in the server config file
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
+CHAT_TERMINAL_USE_STREAMING=true  # stream the output
 ```
 
 ## Chat Terminal Server Options
 
-Options for the chat terminal server are defined in the `chat_terminal` section in the config file `~/.config/chat-terminal/configs/chat_terminal.yaml`.
+Options for the chat terminal server is provided via the `chat_terminal` section in the config file `~/.config/chat-terminal/configs/chat_terminal.yaml`.
+
+You can find all available options and their defaults in `SettingsChatTerminal` class in [chat_terminal/settings.py](./chat_terminal/settings.py).
 
 ```yaml
 chat_terminal:

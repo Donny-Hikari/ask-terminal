@@ -1,10 +1,13 @@
 import random
 import logging
 import asyncio
+import json
+from functools import wraps
 from typing import Dict, Optional
 
 from fastapi import FastAPI, WebSocket
-from fastapi.responses import StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 from .chat_terminal import ChatTerminal, ChatQueryEnvModel
@@ -18,8 +21,8 @@ class ChatInitModel(BaseModel):
 
 class ChatQueryModel(BaseModel):
   message: str
-  env: ChatQueryEnvModel = ChatQueryEnvModel()
   stream: bool = False
+  env: ChatQueryEnvModel = ChatQueryEnvModel()
 
 class ChatQueryCommandModel(ChatQueryModel):
   pass
@@ -36,6 +39,28 @@ chat_pool: Dict[str, ChatTerminal] = {}
 def set_settings(_settings: Settings):
   global settings
   settings = _settings
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+  _logger.error("Error occurred", exc_info=exc)
+  return JSONResponse(
+    status_code=500,
+    content={
+      "status": "error",
+      "error": "Something went wrong. Please try again.",
+    },
+  )
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(request, exc):
+  _logger.error("Request validation error", exc_info=exc)
+  return JSONResponse(
+    status_code=400,
+    content={
+      "status": "error",
+      "error": "Bad request",
+    },
+  )
 
 @app.post('/chat/{conversation_id}/init')
 async def init(conversation_id: str, init_cfg: ChatInitModel=ChatInitModel()):
@@ -61,44 +86,50 @@ async def init(conversation_id: str, init_cfg: ChatInitModel=ChatInitModel()):
     "status": "success",
   }
 
-def conditional_streaming_response(func):
-  async def wrapper(*args, **kwargs):
-    stream = False
-    if 'query' in kwargs:
-      query: ChatQueryModel = kwargs.get('query')
-      stream = query.stream
+def conditional_query_streaming_response(num_sections=1):
+  def decorator(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+      stream = False
+      if 'query' in kwargs:
+        query: ChatQueryModel = kwargs.get('query')
+        stream = query.stream
 
-    q_response = asyncio.Queue()
+      q_response = asyncio.Queue()
 
-    async def receive_response(content, stop, res):
-      await q_response.put((content, stop))
+      async def receive_response(content, stop, res, section):
+        await q_response.put((section, content, stop))
 
-    async def stream_response(producer_task):
-      while True:
-        content, stop = await q_response.get()
-        yield {
-          'content': content,
-          'finished': stop,
-        }
-        if stop:
-          break
-      await producer_task
+      async def stream_response(producer_task):
+        sections_left = num_sections
+        while True:
+          section, content, stop = await q_response.get()
+          s_res = json.dumps({
+            'section': section,
+            'content': content,
+            'finished': stop,
+          }, ensure_ascii=False)
+          yield s_res + '\n'
+          if stop:
+            sections_left -= 1
+            if sections_left == 0:
+              break
+        await producer_task
 
-    producer_task = asyncio.create_task(func(*args, **kwargs, streaming_cb=receive_response if stream else None))
+      kwargs['streaming_cb'] = receive_response if stream else None
+      producer_task = asyncio.create_task(func(*args, **kwargs))
 
-    if not query.stream:
-      response = await producer_task
-      return {
-          "status": "success",
-          "payload": response,
-        }
-    else:
-      return StreamingResponse(stream_response(producer_task), media_type="text/plain")
+      if not stream:
+        return await producer_task
+      else:
+        return StreamingResponse(stream_response(producer_task), media_type="text/plain")
 
-  return wrapper
+    return wrapper
 
-@conditional_streaming_response
+  return decorator
+
 @app.post('/chat/{conversation_id}/query_command')
+@conditional_query_streaming_response(num_sections=2)
 async def query_command(conversation_id: str, query: ChatQueryCommandModel, streaming_cb=None):
   if conversation_id not in chat_pool:
     return {
@@ -125,8 +156,8 @@ async def query_command(conversation_id: str, query: ChatQueryCommandModel, stre
       "payload": response,
     }
 
-@conditional_streaming_response
 @app.post('/chat/{conversation_id}/query_reply')
+@conditional_query_streaming_response()
 async def query_reply(conversation_id: str, query: ChatQueryReplyModel, streaming_cb=None):
   if conversation_id not in chat_pool:
     return {

@@ -1,13 +1,17 @@
+from functools import wraps
 import asyncio
+from typing import Union, Coroutine, Any
 
 def auto_async(func):
   if func is None:
     return None
 
-  if asyncio.iscoroutinefunction(func):
-    return func
-
+  @wraps(func)
   async def wrapper(*args, **kwargs):
-    return func(*args, **kwargs)
+    ret = func(*args, **kwargs)
+    if asyncio.iscoroutine(ret):
+      return await ret
+    else:
+      return ret
 
   return wrapper

@@ -7,6 +7,7 @@ CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute 
 CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution, use with CHAT_TERMINAL_USE_BLACKLIST
 CHAT_TERMINAL_ENDPOINT=  # text completion endpoints, default is specified in the server config file
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
+CHAT_TERMINAL_USE_STREAMING=true  # stream the output
 
 # internal variables
 
@@ -98,6 +99,7 @@ _query_command() {
   local query="$1"
   local data="{ \
     \"message\": \"$query\", \
+    \"stream\": $CHAT_TERMINAL_USE_STREAMING, \
     \"env\": $(_get_env)
   }"
 
@@ -114,6 +116,7 @@ _query_reply() {
   data="{ \
     \"command_executed\": $executed, \
     \"message\": $(echo -E "$observation"), \
+    \"stream\": $CHAT_TERMINAL_USE_STREAMING, \
     \"env\": $(_get_env)
   }"
 
@@ -140,28 +143,90 @@ _confirm_command_execution() {
   fi
 }
 
+_process_response_stream() {
+  local section_prompt="$1"
+  local section_name="$2"
+  local var_name="$3"
+  local res=
+  local hint_printed=false
+
+  # process our stream
+  while read -r line; do
+    section=$(echo -E "$line" | jq -r '.section')
+    content=$(echo -E "$line" | jq -r '.content')
+    finished=$(echo -E "$line" | jq -r '.finished')
+
+    if [[ "$section" != "$section_name" ]]; then
+      # pass on other streams
+      echo -E "$line" >&1
+      continue
+    fi
+
+    if ! $hint_printed; then
+      echo -n "${section_prompt}> " >&3
+      if [[ "$content" =~ ^[[:space:]]* ]]; then
+        content=$(echo -nE "$content" | sed 's/^[ \t]*//')
+      fi
+      hint_printed=true
+    fi
+    res+="$content"
+    echo -nE "$content" >&3
+    if $finished; then
+      break
+    fi
+  done
+  if $hint_printed; then
+    echo >&3
+  fi
+
+  # pass on other streams
+  while read -r line; do
+    echo -E "$line" >&1
+  done
+
+  # streams are all processed, now print the values
+  # this will be preserved to the end result
+  # this is a workaround for unsafe eval
+  echo -E "$var_name=$res" >&1
+}
+
 _chat_once() {
   local query=$1
   local result
   local thinking
   local _command
+  local reply
   local exec_command
   local observation
   local line
+  local end_result
 
-  result=$(_query_command "$query")
-  _status=$(echo -E "$result" | jq -r ".status")
-  if [[ $_status != "success" ]]; then
-    echo $_MESSAGE_PREFIX "Failed to generate command: $result"
-    return 1
-  fi
+  if ! $CHAT_TERMINAL_USE_STREAMING; then
+    result=$(_query_command "$query")
+    _status=$(echo -E "$result" | jq -r ".status")
+    if [[ $_status != "success" ]]; then
+      echo $_MESSAGE_PREFIX "Failed to generate command: $result"
+      return 1
+    fi
 
-  thinking=$(echo -E "$result" | jq -r '.payload.thinking')
-  _command=$(echo -E "$result" | jq -r '.payload.command')
-  if [[ -n $thinking ]]; then
-    _print_response "Thought" "$thinking"
+    thinking=$(echo -E "$result" | jq -r '.payload.thinking')
+    _command=$(echo -E "$result" | jq -r '.payload.command')
+    if [[ -n $thinking ]]; then
+      _print_response "Thought" "$thinking"
+    fi
+    _print_response "Command" "$_command"
+  else
+    exec 3>&1
+    end_result=$(_query_command "$query" | \
+      _process_response_stream "Thought" 'thinking' thinking | \
+      _process_response_stream "Command" 'command' _command)
+    exec 3>&-
+    thinking=$(echo -E "$end_result" | grep "^thinking=" | sed 's/^thinking=//')
+    _command=$(echo -E "$end_result" | grep "^_command=" | sed 's/^_command=//')
+    if [[ "$_command" =~ ^\` && "$_command" =~ \`$ ]]; then
+      _command=${_command:1:-1}
+    fi
   fi
-  _print_response "Command" "$_command"
 
   exec_command=false
   if [[ "$CHAT_TERMINAL_USE_BLACKLIST" == "true" ]]; then
@@ -182,6 +247,7 @@ _chat_once() {
   fi
 
   if $exec_command; then
+    # workaround to avoid pipe and subshell to
     # ensure execution in current shell
     # use /dev/shm to avoid wearing the disk
     memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
@@ -217,15 +283,23 @@ _chat_once() {
       _advance_read -p "Clarification: " observation
     fi
 
-    result=$(_query_reply "$exec_command" "$observation")
-    _status=$(echo -E "$result" | jq -r ".status")
-    if [[ $_status != "success" ]]; then
-      echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
-      return 1
-    fi
+    if ! $CHAT_TERMINAL_USE_STREAMING; then
+      result=$(_query_reply "$exec_command" "$observation")
+      _status=$(echo -E "$result" | jq -r ".status")
+      if [[ $_status != "success" ]]; then
+        echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
+        return 1
+      fi
 
-    reply=$(echo -E "$result" | jq -r '.payload.reply')
-    _print_response "Reply" "$reply"
+      reply=$(echo -E "$result" | jq -r '.payload.reply')
+      _print_response "Reply" "$reply"
+    else
+      exec 3>&1
+      end_result=$(_query_reply "$exec_command" "$observation" | \
+        _process_response_stream "Reply" 'reply' reply)
+      exec 3>&-
+      reply=$(echo -E "$end_result" | grep "^reply=" | sed 's/^reply=//')
+    fi
   fi
 }
 
