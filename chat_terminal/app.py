@@ -1,21 +1,18 @@
 import random
 import logging
-from typing import Dict, Literal, Optional
+from typing import Dict, Optional
 
 from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
 
-from .chat_terminal import ChatTerminal
-from .settings import Settings, SettingsChatTerminal
+from .chat_terminal import ChatTerminal, ChatQueryEnvModel
+from .settings import Settings
 
 _logger = logging.getLogger(__name__)
 
 
 class ChatInitModel(BaseModel):
   endpoint: Optional[str] = None
-
-class ChatQueryEnvModel(BaseModel):
-  shell: Optional[Literal["bash", "zsh"]] = None
 
 class ChatQueryModel(BaseModel):
   message: str
@@ -71,7 +68,7 @@ async def query_command(conversation_id: str, query: ChatQueryCommandModel):
   conversation = chat_pool[conversation_id]
 
   try:
-    response = conversation.query_command(query.message, env=query.env.model_dump())
+    response = conversation.query_command(query.message, env=query.env)
   except Exception:
     return {
       "status": "error",
@@ -95,7 +92,7 @@ async def query_reply(conversation_id: str, query: ChatQueryReplyModel):
   response = conversation.query_reply(
     command_refused=not query.command_executed,
     observation=query.message,
-    env=query.env.model_dump(),
+    env=query.env,
   )
 
   return {

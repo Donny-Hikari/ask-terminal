@@ -1,7 +1,7 @@
 import logging
 import os
 import math
-from typing import List
+from typing import List, Literal, Optional
 
 import yaml
 from mext import Mext
@@ -24,6 +24,10 @@ class ChatHistoryItem(BaseModel):
 
   command_refused: bool = False
   observation_received: bool = False
+
+class ChatQueryEnvModel(BaseModel):
+  os: str = "Unix"
+  shell: Optional[Literal["bash", "zsh"]] = None
 
 class ChatTerminal:
   TRUNCATION_INDICATOR = "<...TRUNCATED...>"
@@ -138,12 +142,12 @@ class ChatTerminal:
 
     return reply
 
-  def query_command(self, query, env={}, cb=None):
+  def query_command(self, query, env: ChatQueryEnvModel={}, cb=None):
     self._history.append(
       ChatHistoryItem(query=query),
     )
 
-    with self._context_mgr.use_params(**env):
+    with self._context_mgr.use_params(env=env):
       thinking = ""
       if self._configs.use_thinking:
         gen_role = f"{self._agent} Thinking"
@@ -168,7 +172,7 @@ class ChatTerminal:
       'command': command,
     }
 
-  def query_reply(self, command_refused, observation="", env={}, cb=None):
+  def query_reply(self, command_refused, observation="", env: ChatQueryEnvModel={}, cb=None):
     self._history[-1].command_refused = command_refused
     self._history[-1].observation = self._tc.truncate(
       observation,
@@ -193,7 +197,7 @@ class ChatTerminal:
 
       additional_params[key] = self._configs.max_reply_tokens
 
-    with self._context_mgr.use_params(**env):
+    with self._context_mgr.use_params(env=env):
       gen_role = f"{self._agent}"
       reply = self.chat(
         gen_role=gen_role,

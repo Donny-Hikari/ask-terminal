@@ -32,10 +32,31 @@ _advance_read() {
 
 # APIs
 
+_get_os_version() {
+  if [ -f /etc/os-release ]; then
+    # Linux
+    echo $(. /etc/os-release && echo "$NAME $VERSION")
+  elif command -v sw_vers >/dev/null 2>&1; then
+    # macOS
+    sw_vers | awk -F': ' '/ProductName|ProductVersion/ { printf "%s ", $2 }'
+  elif [ "$(uname)" = "FreeBSD" ]; then
+    # FreeBSD
+    uname -rms
+  elif [ "$(uname)" = "SunOS" ]; then
+    # Solaris/Illumos
+    cat /etc/release
+  else
+    # fallback
+    echo Unix
+  fi
+}
+
 _get_env() {
   local shell_name="${SHELL##*/}"
+  local os_version=$(_get_os_version | tr -s '\n' ' ' | xargs)
 
   echo "{ \
+    \"os\": \"$os_version\", \
     \"shell\": \"$shell_name\" \
   }"
 }
