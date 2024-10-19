@@ -55,7 +55,7 @@ class ChatTerminal:
 
     self._roles = [
       f"{self._user}",
-      f"{self._agent} Thinking",
+      f"{self._agent}/Thinking",
       "Command",
       "Observation",
       f"{self._agent}",
@@ -162,7 +162,7 @@ class ChatTerminal:
     with self._context_mgr.use_params(env=env):
       thinking = ""
       if self._configs.use_thinking:
-        gen_role = f"{self._agent} Thinking"
+        gen_role = f"{self._agent}/Thinking"
         thinking = await self.chat(
           gen_role=gen_role,
           stop=self._get_stop_from_role(gen_role),

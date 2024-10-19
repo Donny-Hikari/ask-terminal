@@ -75,7 +75,7 @@ _curl_server() {
     data_source="@""$data_memfile"
   fi
 
-  curl -s \
+  curl -s --no-buffer \
     -X POST "${CHAT_TERMINAL_SERVER_URL}${url}" \
     -H "Content-Type: application/json" \
     -d "$data_source"
