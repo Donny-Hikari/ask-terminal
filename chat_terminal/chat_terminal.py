@@ -144,6 +144,7 @@ class ChatTerminal:
     )
 
     with self._context_mgr.use_params(**env):
+      thinking = ""
       if self._configs.use_thinking:
         gen_role = f"{self._agent} Thinking"
         thinking = self.chat(

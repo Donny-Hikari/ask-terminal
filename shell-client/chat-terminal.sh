@@ -137,7 +137,9 @@ _chat_once() {
 
   thinking=$(echo -E "$result" | jq -r '.payload.thinking')
   _command=$(echo -E "$result" | jq -r '.payload.command')
-  _print_response "Thought" "$thinking"
+  if [[ -n $thinking ]]; then
+    _print_response "Thought" "$thinking"
+  fi
   _print_response "Command" "$_command"
 
   exec_command=false
@@ -187,11 +189,13 @@ _chat_once() {
     observation=$(cat $memfile)
     rm $memfile
     echo $_MESSAGE_PREFIX "Command finished"
-  else
-    _advance_read -p "Clarification: " observation
   fi
 
   if $CHAT_TERMINAL_USE_REPLY; then
+    if ! $exec_command; then
+      _advance_read -p "Clarification: " observation
+    fi
+
     result=$(_query_reply "$exec_command" "$observation")
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
