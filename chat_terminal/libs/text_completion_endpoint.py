@@ -9,6 +9,8 @@ import math
 import asyncio
 import aiohttp
 
+from chat_terminal.utils import auto_async
+
 
 class TextCompletionBase:
   def __init__(self, *args, **kwargs):
@@ -84,9 +86,13 @@ class LLamaTextCompletion(TextCompletionBase):
 
         return res['tokens']
 
-  async def create(self,
-           prompt=None, params={},
-           cb=None):
+  async def create(
+      self,
+      prompt=None, params={},
+      cb=None,
+    ):
+    cb = auto_async(cb)
+
     req = params
     if prompt is not None:
       req['prompt'] = prompt
@@ -163,6 +169,7 @@ class OpenAITextCompletion(TextCompletionBase):
     -------------
     max_retries: <= 0 means forever
     """
+    cb = auto_async(cb)
 
     if messages is None:
       messages = []
@@ -256,6 +263,8 @@ class AnthropicTextCompletion(TextCompletionBase):
     ):
     import anthropic
 
+    cb = auto_async(cb)
+
     system_prompt = anthropic.NOT_GIVEN
 
     if messages is None:
@@ -309,13 +318,19 @@ class OllamaTextCompletion(TextCompletionBase):
   async def tokenize(self, content):
     raise NotImplementedError  # too bad ollama doesn't support tokenziation for now
 
-  async def create(self, prompt, params={}, cb=None):
+  async def create(
+      self,
+      prompt, params={},
+      cb=None,
+    ):
     req = {
       'model': self.model_name,
       'prompt': prompt,
       'raw': True,
       "options": params,
     }
+
+    cb = auto_async(cb)
 
     reply = ''
     async with aiohttp.ClientSession() as session:

@@ -142,6 +142,15 @@ class ChatTerminal:
 
     return reply
 
+  @staticmethod
+  def _add_section_info_to_query_callback(cb, section_name: str):
+    if cb is None:
+      return None
+
+    def wrapper(*args, **kwargs):
+      return cb(*args, **kwargs, section=section_name)
+    return wrapper
+
   async def query_command(self, query, env: ChatQueryEnvModel={}, cb=None):
     self._history.append(
       ChatHistoryItem(query=query),
@@ -154,7 +163,7 @@ class ChatTerminal:
         thinking = await self.chat(
           gen_role=gen_role,
           stop=self._get_stop_from_role(gen_role),
-          cb=cb,
+          cb=ChatTerminal._add_section_info_to_query_callback(cb, "thinking"),
         )
         self._history[-1].thinking = thinking
 
@@ -162,7 +171,7 @@ class ChatTerminal:
       command = await self.chat(
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
-        cb=cb,
+        cb=ChatTerminal._add_section_info_to_query_callback(cb, "command"),
       )
       command = command.strip('`')
       self._history[-1].command = command
@@ -203,7 +212,7 @@ class ChatTerminal:
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
         additional_params=additional_params,
-        cb=cb,
+        cb=ChatTerminal._add_section_info_to_query_callback(cb, "reply"),
       )
       self._history[-1].reply = reply
 
