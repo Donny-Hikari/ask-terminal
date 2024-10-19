@@ -6,21 +6,24 @@ import time
 import logging
 import math
 
+import asyncio
+import aiohttp
+
 
 class TextCompletionBase:
   def __init__(self, *args, **kwargs):
     pass
 
-  def tokenize(self, content):
+  async def tokenize(self, content):
     raise NotImplementedError
 
-  def create(self, *args, **kwargs):
+  async def create(self, *args, **kwargs):
     raise NotImplementedError
 
-  def _truncate_count_tokens(self, content):
-    return len(self.tokenize(content))
+  async def _truncate_count_tokens(self, content):
+    return len(await self.tokenize(content))
 
-  def truncate(self, content, target_num, truncation_indicator, front_ratio=0.5, coarse_gap=0, return_is_truncated=False):
+  async def truncate(self, content, target_num, truncation_indicator, front_ratio=0.5, coarse_gap=0, return_is_truncated=False):
     """
     Params
     ======
@@ -32,7 +35,7 @@ class TextCompletionBase:
       This could speed up the binary search largely. The speed up ratio can be calculated as `log2(coarse_gap) / log2(original_tokens_count_of_content)`.
     """
 
-    if self._truncate_count_tokens(content) <= target_num:
+    if await self._truncate_count_tokens(content) <= target_num:
       if return_is_truncated:
         return content, False
       else:
@@ -46,7 +49,7 @@ class TextCompletionBase:
       m = (l+r)>>1
       front = int(m*front_ratio)
       rear = m - front
-      num_tokens = self._truncate_count_tokens(content[:front] + truncation_indicator + content[-rear:])
+      num_tokens = await self._truncate_count_tokens(content[:front] + truncation_indicator + content[-rear:])
       if coarse_gap > 0 and abs(num_tokens - target_num) <= coarse_gap:
         l = m
         break
@@ -123,10 +126,28 @@ class OpenAITextCompletion(TextCompletionBase):
     self.client = OpenAI(api_key=api_key)
     self.initial_system_msg = initial_system_msg
 
-  def tokenize(self, content):
+  async def tokenize(self, content):
+    return await asyncio.to_thread(
+      self._tokenize,
+      content=content,
+    )
+
+  async def create(self,
+                    messages=None, params={ 'stream': True }, prompt=None,
+                    cb=None, max_retries=5):
+    return await asyncio.to_thread(
+      self._create,
+      messages=messages,
+      params=params,
+      prompt=prompt,
+      cb=cb,
+      max_retries=max_retries,
+    )
+
+  def _tokenize(self, content):
     return self.tokenizer.tokenize(content)
 
-  def create(self,
+  def _create(self,
            messages=None, params={ 'stream': True }, prompt=None,
            cb=None, max_retries=5):
     """
@@ -249,10 +270,10 @@ class OllamaTextCompletion(TextCompletionBase):
     self.model_name = model_name
     self.logger = logger
 
-  def tokenize(self, content):
+  async def tokenize(self, content):
     raise NotImplementedError  # too bad ollama doesn't support tokenziation for now
 
-  def create(self, prompt, params={}, cb=None):
+  async def create(self, prompt, params={}, cb=None):
     req = {
       'model': self.model_name,
       'prompt': prompt,
@@ -261,51 +282,57 @@ class OllamaTextCompletion(TextCompletionBase):
     }
 
     reply = ''
-    with requests.post(f"{self.server_url}/api/generate", json=req, stream=True) as response:
-      # Processing streaming data in chunks
-      buffer = b""  # Buffer to accumulate streamed data
-      for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
-        if chunk:
-          buffer += chunk
-          try:
-            # Attempt to decode JSON from the accumulated buffer
-            res = json.loads(buffer)
+    async with aiohttp.ClientSession() as session:
+      async with session.post(f"{self.server_url}/api/generate", json=req) as response:
+        response.raise_for_status()
 
-            if 'error' in res:
-              if self.logger:
-                self.logger.warning(f"Encounter error: {res['error']}")
-              raise RuntimeError(f"Error from server: {res['error']}")
+        # Processing streaming data in chunks
+        buffer = b""  # Buffer to accumulate streamed data
+        async for chunk in response.content.iter_chunked(1024):
+          if chunk:
+            buffer += chunk
+            while b'\n' in buffer:
+              raw_res, buffer = buffer.split(b'\n', 1)
+              try:
+                # Attempt to decode JSON from the accumulated buffer
+                res = json.loads(raw_res.decode('utf-8'))
 
-            reply += res['response']
-            if cb is not None:
-              cb(content=res['response'], stop=res['done'], res=res)
+                if 'error' in res:
+                  if self.logger:
+                    self.logger.warning(f"Encounter error: {res['error']}")
+                  raise RuntimeError(f"Error from server: {res['error']}")
 
-            if res['done']:
-              break
+                reply += res['response']
+                if cb is not None:
+                  cb(content=res['response'], stop=res['done'], res=res)
 
-            buffer = b""  # Clear the buffer after processing
-          except json.JSONDecodeError:
-            pass  # Incomplete JSON, continue accumulating data
+                if res['done']:
+                  break
+
+              except json.JSONDecodeError:
+                pass  # Incomplete JSON, continue accumulating data
 
     return reply
 
-  def count_tokens(self, content, truncate=True):
+  async def count_tokens(self, content, truncate=True):
     data = {
       'model': self.model_name,
       'input': content,
       'truncate': truncate,
     }
 
-    raw_res = requests.post(f"{self.server_url}/api/embed", json=data)
-    res = json.loads(raw_res.content)
+    async with aiohttp.ClientSession() as session:
+      async with session.post(f"{self.server_url}/api/embed", json=data) as raw_res:
+        raw_res.raise_for_status()
+        res = await raw_res.json(encoding='utf-8')
 
     if 'error' in res:
       raise RuntimeError(res['error'])
 
     return res['prompt_eval_count']
 
-  def _truncate_count_tokens(self, content):
+  async def _truncate_count_tokens(self, content):
     try:
-      return self.count_tokens(content, truncate=False)
+      return await self.count_tokens(content, truncate=False)
     except Exception:
       return math.inf

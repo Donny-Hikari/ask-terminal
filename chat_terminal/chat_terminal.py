@@ -122,7 +122,7 @@ class ChatTerminal:
   def _get_stop_from_role(self, role: str):
     return self._roles_hint
 
-  def chat(self, gen_role, stop=[], additional_params={}, cb=None):
+  async def chat(self, gen_role, stop=[], additional_params={}, cb=None):
     prompt = self._context_mgr.compose(
       gen_role=gen_role,
       history=self._history,
@@ -135,14 +135,14 @@ class ChatTerminal:
 
     _logger.log(LOG_HEAVY, f"Prompt:\n{prompt}")
 
-    reply = self._tc.create(prompt=prompt, params=params, cb=cb)
+    reply = await self._tc.create(prompt=prompt, params=params, cb=cb)
     reply = reply.strip()
 
     _logger.log(LOG_HEAVY, f"Response:\n{reply}")
 
     return reply
 
-  def query_command(self, query, env: ChatQueryEnvModel={}, cb=None):
+  async def query_command(self, query, env: ChatQueryEnvModel={}, cb=None):
     self._history.append(
       ChatHistoryItem(query=query),
     )
@@ -151,7 +151,7 @@ class ChatTerminal:
       thinking = ""
       if self._configs.use_thinking:
         gen_role = f"{self._agent} Thinking"
-        thinking = self.chat(
+        thinking = await self.chat(
           gen_role=gen_role,
           stop=self._get_stop_from_role(gen_role),
           cb=cb,
@@ -159,7 +159,7 @@ class ChatTerminal:
         self._history[-1].thinking = thinking
 
       gen_role = "Command"
-      command = self.chat(
+      command = await self.chat(
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
         cb=cb,
@@ -172,9 +172,9 @@ class ChatTerminal:
       'command': command,
     }
 
-  def query_reply(self, command_refused, observation="", env: ChatQueryEnvModel={}, cb=None):
+  async def query_reply(self, command_refused, observation="", env: ChatQueryEnvModel={}, cb=None):
     self._history[-1].command_refused = command_refused
-    self._history[-1].observation = self._tc.truncate(
+    self._history[-1].observation = await self._tc.truncate(
       observation,
       self._configs.max_observation_tokens,
       truncation_indicator=ChatTerminal.TRUNCATION_INDICATOR,
@@ -199,7 +199,7 @@ class ChatTerminal:
 
     with self._context_mgr.use_params(env=env):
       gen_role = f"{self._agent}"
-      reply = self.chat(
+      reply = await self.chat(
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
         additional_params=additional_params,

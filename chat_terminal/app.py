@@ -68,7 +68,7 @@ async def query_command(conversation_id: str, query: ChatQueryCommandModel):
   conversation = chat_pool[conversation_id]
 
   try:
-    response = conversation.query_command(query.message, env=query.env)
+    response = await conversation.query_command(query.message, env=query.env)
   except Exception:
     return {
       "status": "error",
@@ -89,7 +89,7 @@ async def query_reply(conversation_id: str, query: ChatQueryReplyModel):
     }
   conversation = chat_pool[conversation_id]
 
-  response = conversation.query_reply(
+  response = await conversation.query_reply(
     command_refused=not query.command_executed,
     observation=query.message,
     env=query.env,
