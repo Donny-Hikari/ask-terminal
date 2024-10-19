@@ -218,6 +218,8 @@ class AnthropicTokenizer:
     return get_token_ids_anthropic(text)
 
 class AnthropicTextCompletion(TextCompletionBase):
+  DEFAULT_MAX_TOKENS = 1024
+
   def __init__(self, model_name, api_key=None, logger=None, initial_system_msg: str=None):
     from anthropic import Anthropic
 
@@ -227,12 +229,31 @@ class AnthropicTextCompletion(TextCompletionBase):
     self.client = Anthropic(api_key=api_key)
     self.initial_system_msg = initial_system_msg
 
-  def tokenize(self, content):
+  async def tokenize(self, content):
+    return await asyncio.to_thread(
+      self._tokenize,
+      content=content,
+    )
+
+  async def create(
+      self,
+      messages=None, params={}, prompt=None,
+      cb=None,
+    ):
+    return await asyncio.to_thread(
+      self._create,
+      messages=messages, params=params, prompt=prompt,
+      cb=cb,
+    )
+
+  def _tokenize(self, content):
     return self.tokenizer.tokenize(content)
 
-  def create(self,
-           messages=None, params={}, prompt=None,
-           cb=None):
+  def _create(
+      self,
+      messages=None, params={}, prompt=None,
+      cb=None,
+    ):
     import anthropic
 
     system_prompt = anthropic.NOT_GIVEN
@@ -254,6 +275,13 @@ class AnthropicTextCompletion(TextCompletionBase):
         else:
           user_ai_messages.append(m)
       messages = user_ai_messages
+
+    if 'max_tokens' not in params:
+      params['max_tokens'] = AnthropicTextCompletion.DEFAULT_MAX_TOKENS
+
+    if 'stop' in params:
+      params['stop_sequences'] = params['stop']
+      del params['stop']
 
     reply = ''
     response = self.client.messages.create(
