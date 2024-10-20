@@ -455,6 +455,7 @@ chat-terminal() {
   local result
   local _status
   local error
+  local ret_code
 
   if [[ -z "$_conversation_id" ]]; then
     if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
@@ -486,6 +487,10 @@ chat-terminal() {
       fi
       if [[ -n $query ]]; then
         _chat_once "$query"
+        ret_code=$?
+        if [[ $ret_code -ne 0 ]]; then
+          return $ret_code
+        fi
       fi
     done
   fi
