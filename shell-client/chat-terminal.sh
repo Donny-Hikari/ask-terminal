@@ -131,6 +131,24 @@ _query_reply() {
 
 # core functions
 
+_parse_error_from_result() {
+  local result="$1"
+  local error
+
+  if [[ -z "$result" ]]; then
+    error="server not online"
+  else
+    error=$(echo -E "$result" | jq '.error')
+    if [[ "$error" == null ]]; then
+      error=$result
+    else
+      error=$(echo -E "$error" | jq -r .)
+    fi
+  fi
+
+  echo "$error"
+}
+
 _confirm_command_execution() {
   echo -n $_MESSAGE_PREFIX "Execute the command? (y/[N]) "
   if [[ -n "$BASH_VERSION" ]]; then
@@ -166,6 +184,8 @@ _process_response_stream() {
   while read -r line; do
     if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_]*= ]]; then
       # pass on end results
+      # normally end results won't appear here
+      # but when an error occurs, they will show up here
       echo -E "$line" >&1
       continue
     fi
@@ -178,7 +198,7 @@ _process_response_stream() {
 
     if [[ "$error" != null ]]; then
       if [[ -z "$first_error_result" ]]; then
-       first_error_result="$first_error_result"
+       first_error_result="$line"
       fi
 
       continue  # consume the reminding streams
@@ -283,7 +303,8 @@ _chat_once() {
     result=$(_query_command "$query")
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
-      echo $_MESSAGE_PREFIX "Failed to generate command: $result"
+      error=$(_parse_error_from_result "$result")
+      echo $_MESSAGE_PREFIX "Failed to generate command: $error"
       return 1
     fi
 
@@ -303,6 +324,9 @@ _chat_once() {
       error="server not online"
     else
       error=$(echo -E "$end_result" | grep "^error=" | sed 's/^error=//')
+      if [[ -n "$error" ]]; then
+        error=$(_parse_error_from_result "$error")
+      fi
     fi
 
     if [[ -n "$error" ]]; then
@@ -390,6 +414,7 @@ _chat_once() {
       result=$(_query_reply "$exec_command" "$observation")
       _status=$(echo -E "$result" | jq -r ".status")
       if [[ $_status != "success" ]]; then
+        error=$(_parse_error_from_result "$result")
         echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
         return 1
       fi
@@ -406,6 +431,9 @@ _chat_once() {
         error="server not online"
       else
         error=$(echo -E "$end_result" | grep "^error=" | sed 's/^error=//')
+        if [[ -n "$error" ]]; then
+          error=$(_parse_error_from_result "$error")
+        fi
       fi
 
       if [[ -n "$error" ]]; then
@@ -426,24 +454,24 @@ chat-terminal() {
   local query="$@"
   local result
   local _status
+  local error
 
   if [[ -z "$_conversation_id" ]]; then
+    if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
+      echo $_MESSAGE_PREFIX "Using endpoint: $CHAT_TERMINAL_ENDPOINT"
+    fi
+
     # generate a UUID as conversation ID
     _conversation_id=$(uuidgen)
     result=$(_init_conversation)
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
-      if [[ -z "$result" ]]; then
-        result="server not online"
-      fi
-      echo $_MESSAGE_PREFIX "Failed to initialize converstaion: ${result}"
+      error=$(_parse_error_from_result "$result")
+      echo $_MESSAGE_PREFIX "Failed to initialize converstaion: ${error}"
       _conversation_id=
       return 1
     fi
     echo $_MESSAGE_PREFIX "Initialized conversation: $_conversation_id"
-    if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
-      echo $_MESSAGE_PREFIX "Using endpoint: $CHAT_TERMINAL_ENDPOINT"
-    fi
   fi
 
   if [[ -n "$query" ]]; then
