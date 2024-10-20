@@ -67,6 +67,7 @@ _curl_server() {
   local data="$2"
   local data_memfile=
   local data_source="$data"
+  local ret_code=0
 
   if [[ ${#data} -gt 10240 ]]; then
     # dump data to memory file to avoid overwhelming argument list
@@ -79,10 +80,13 @@ _curl_server() {
     -X POST "${CHAT_TERMINAL_SERVER_URL}${url}" \
     -H "Content-Type: application/json" \
     -d "$data_source"
+  ret_code=$?
 
   if [[ -n $data_memfile ]]; then
     rm $data_memfile
   fi
+
+  return $ret_code
 }
 
 _init_conversation() {
@@ -104,6 +108,7 @@ _query_command() {
   }"
 
   _curl_server "/chat/${_conversation_id}/query_command" "$data"
+  return $?
 }
 
 _query_reply() {
@@ -121,6 +126,7 @@ _query_reply() {
   }"
 
   _curl_server "/chat/${_conversation_id}/query_reply" "$data"
+  return $?
 }
 
 # core functions
@@ -150,16 +156,33 @@ _process_response_stream() {
   local res=
   local hint_printed=false
 
+  local first_error_result=
+  local error=
   local section=
   local finished=
   local content=
 
   # process our stream
   while read -r line; do
+    if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_]*= ]]; then
+      # pass on end results
+      echo -E "$line" >&1
+      continue
+    fi
+
+    error=$(echo -E "$line" | jq '.error')  # could be null, keep the string quoted
     section=$(echo -E "$line" | jq -r '.section')
     finished=$(echo -E "$line" | jq -r '.finished')
     IFS= read -rd '' content < <(echo -E "$line" | jq -r '.content')  # workaround for subshell trailing newlines trimming issue
     content=${content%$'\n'}
+
+    if [[ "$error" != null ]]; then
+      if [[ -z "$first_error_result" ]]; then
+       first_error_result="$first_error_result"
+      fi
+
+      continue  # consume the reminding streams
+    fi
 
     if [[ "$section" != "$section_name" ]]; then
       # pass on other streams
@@ -200,10 +223,47 @@ _process_response_stream() {
     echo -E "$line" >&1
   done
 
+  if [[ -n "$first_error_result" ]]; then
+    # pass on errors
+    echo -E "error=$first_error_result" >&1
+    return 1
+  fi
+
   # streams are all processed, now print the values
   # this will be preserved to the end result
   # this is a workaround for unsafe eval
   echo -E "$var_name=$res" >&1
+}
+
+_query_and_process_command() {
+  local ret_code=0
+
+  _query_command "$@" | \
+    _process_response_stream "Thought" 'thinking' thinking | \
+    _process_response_stream "Command" 'command' _command
+
+  if [[ -n $BASH_VERSION ]]; then
+    ret_code=${PIPESTATUS[0]}
+  elif [[ -n $ZSH_VERSION ]]; then
+    ret_code=${pipestatus[1]}
+  fi
+
+  return $ret_code
+}
+
+_query_and_process_reply() {
+  local ret_code=0
+
+  _query_reply "$@" | \
+    _process_response_stream "Reply" 'reply' reply
+
+  if [[ -n $BASH_VERSION ]]; then
+    ret_code=${PIPESTATUS[0]}
+  elif [[ -n $ZSH_VERSION ]]; then
+    ret_code=${pipestatus[1]}
+  fi
+
+  return $ret_code
 }
 
 _chat_once() {
@@ -216,6 +276,8 @@ _chat_once() {
   local observation
   local line
   local end_result
+  local ret_code
+  local error
 
   if ! $CHAT_TERMINAL_USE_STREAMING; then
     result=$(_query_command "$query")
@@ -233,10 +295,21 @@ _chat_once() {
     _print_response "Command" "$_command"
   else
     exec 3>&1
-    end_result=$(_query_command "$query" | \
-      _process_response_stream "Thought" 'thinking' thinking | \
-      _process_response_stream "Command" 'command' _command)
+    end_result=$(_query_and_process_command "$query")
+    ret_code=$?
     exec 3>&-
+
+    if [[ $ret_code -ne 0 ]]; then
+      error="server not online"
+    else
+      error=$(echo -E "$end_result" | grep "^error=" | sed 's/^error=//')
+    fi
+
+    if [[ -n "$error" ]]; then
+      echo $_MESSAGE_PREFIX "Failed to query command: ${error}"
+      return 1
+    fi
+
     thinking=$(echo -E "$end_result" | grep "^thinking=" | sed 's/^thinking=//')
     _command=$(echo -E "$end_result" | grep "^_command=" | sed 's/^_command=//')
     if [[ "$_command" =~ ^\` && "$_command" =~ \`$ ]]; then
@@ -309,7 +382,7 @@ _chat_once() {
   fi
 
   if $CHAT_TERMINAL_USE_REPLY; then
-    if ! $exec_command; then
+    if ! $exec_command && [[ ${#_command} -gt 0 ]]; then
       _advance_read -p "Clarification: " observation
     fi
 
@@ -325,9 +398,21 @@ _chat_once() {
       _print_response "Reply" "$reply"
     else
       exec 3>&1
-      end_result=$(_query_reply "$exec_command" "$observation" | \
-        _process_response_stream "Reply" 'reply' reply)
+      end_result=$(_query_and_process_reply "$exec_command" "$observation")
+      ret_code=$?
       exec 3>&-
+
+      if [[ $ret_code -ne 0 ]]; then
+        error="server not online"
+      else
+        error=$(echo -E "$end_result" | grep "^error=" | sed 's/^error=//')
+      fi
+
+      if [[ -n "$error" ]]; then
+        echo $_MESSAGE_PREFIX "Failed to query reply: ${error}"
+        return 1
+      fi
+
       reply=$(echo -E "$end_result" | grep "^reply=" | sed 's/^reply=//')
     fi
   fi
