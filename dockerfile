@@ -10,5 +10,8 @@ RUN mkdir -p ./locals
 COPY locals/chat_terminal.yaml ./locals/
 
 RUN apt-get update
+RUN apt-get install -y jq uuid-runtime
 
-CMD ["make", "setup"]
+RUN make setup
+
+ENTRYPOINT ["chat-terminal-server"]
