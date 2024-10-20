@@ -100,10 +100,17 @@ def conditional_query_streaming_response(num_sections=1):
       async def receive_response(content, stop, res, section):
         await q_response.put((section, content, stop))
 
-      async def stream_response(producer_task):
+      async def stream_response(producer_task: asyncio.Task):
         sections_left = num_sections
         while True:
-          section, content, stop = await q_response.get()
+          get_response_task = asyncio.create_task(q_response.get())
+          done, pending = await asyncio.wait([producer_task, get_response_task], return_when=asyncio.FIRST_COMPLETED)
+          if get_response_task in done:
+            section, content, stop = get_response_task.result()
+          else:
+            get_response_task.cancel()
+            break  # stop early on error
+
           s_res = json.dumps({
             'section': section,
             'content': content if content is not None else '',
@@ -114,7 +121,10 @@ def conditional_query_streaming_response(num_sections=1):
             sections_left -= 1
             if sections_left == 0:
               break
-        await producer_task
+
+        final_response = await producer_task
+        final_response = json.dumps(final_response, ensure_ascii=False)
+        yield final_response + '\n'
 
       kwargs['streaming_cb'] = receive_response if stream else None
       producer_task = asyncio.create_task(func(*args, **kwargs))
