@@ -5,6 +5,7 @@ scripts
 credentials
 locals
 local.mk
+tmp
 
 # caches
 __pycache__
@@ -15,3 +16,4 @@ __pycache__
 # build generated
 *.egg-info
 build
+dist
