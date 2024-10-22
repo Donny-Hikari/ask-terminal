@@ -2,13 +2,12 @@
 
 Chat with your terminal and get things done using natural language with the help of LLM (Large Language Model).
 
+![Demo1](./demo/demo1.gif)
+
 ## Examples
 
-````markdown
-```shell
+```console
 $ ask which program is using the most cpu resource
-```
-```log (output)
 % Initialized conversation: 35b95f19-2fda-4bda-970e-f1240234c5f2
 Thoughts> This is a classic question to determine resource usage. We can use `top` command to get real-time data, or use `ps` and `grep` commands to find out the process with the highest CPU usage.
 Command> ps -eo %cpu,pid,comm | sort -k 1 -rn
@@ -23,7 +22,6 @@ Command> ps -eo %cpu,pid,comm | sort -k 1 -rn
 % Command finished
 Reply> The program using the most cpu resource is "ollama_llama_se". Its pid and percentage of cpu usage are 2337567 and 21.2 respectively.
 ```
-````
 
 ## Installation
 
@@ -97,9 +95,74 @@ You may run the client in docker as well. This can help prevent unwanted command
 $ make docker-run-client -B CLIENT_ENV=CHAT_TERMINAL_USE_BLACKLIST=true
 ```
 
-`CHAT_TERMINAL_USE_BLACKLIST=true` allows the client to run commands that are not in the blacklist without confirmation.
+`CHAT_TERMINAL_USE_BLACKLIST=true` allows the client to run commands that are not in the blacklist without confirmation. Use `CHAT_TERMINAL_BLACKLIST_PATTERN` to set the blacklist pattern (grep pattern matching).
 
-## Text Completion Endpoint
+## Usage
+
+Chat with your terminal with the command `chat-terminal`:
+
+```console
+$ chat-terminal go home
+% Initialized conversation: 931a4474-384c-4fdf-8c3b-934c95ee48ed
+Thought> The user wants to change the current directory. I should use the `cd` command.
+Command> cd ~/
+% Execute the command? (y/[N]) y
+% Command finished
+Reply> The system has changed its current folder to your home directory.
+```
+
+Or simply `ask` (if you have set the alias):
+
+```console
+$ ask find the keybindings file for vscode
+Thought> The user may have stored his keybindings in a variety of places like '.vscode/keybindings.json', 'keybindings.json' or even '$HOME/.config/vscode/keybindings.json'.
+Command> find ~/.config -name "keybindings.json"
+% Execute the command? (y/[N]) y
+/home/username/.config/Code/User/keybindings.json
+% Command finished
+Reply> The keybindings file is "/home/username/.config/Code/User/keybindings.json".
+```
+
+### Interactive Mode
+
+Run the command `chat-terminal` or `ask` without arguments to enter interactive mode:
+
+```console
+$ chat-terminal
+% Initialized conversation: d7370783-ce14-4f13-9901-dfffbb5990f3
+> which program is using port 16099
+Thought> The user might want to find the process that occupies this port. We can use the `netstat` command.
+Command> netstat -tlnp | grep 16099
+% Execute the command? (y/[N]) y
+(eval):1: command not found: netstat
+% Command finished
+Reply> The 'netstat' command is not available in this zsh environment. We can replace it with the `ss` command.
+Let me try again.
+> do it
+Thought> No problem, let's find the process that occupies port 16099 using ss command instead of netstat.
+Command> ss -tlnp | grep 16099
+% Execute the command? (y/[N]) y
+LISTEN 0      2048       127.0.0.1:16099      0.0.0.0:*    users:(("chat-terminal-s",pid=207732,fd=6))
+% Command finished
+Reply> The program using port 16099 is "chat-terminal-s".
+>
+```
+
+### Advance Usage
+
+Refers to [Shell Client Options](#shell-client-options) and [Server Options](#server-options) for more options to configure.
+
+#### Reset Chat Session
+
+You can reset the chat session with the following command:
+
+```shell
+$ chat-terminal-reset
+```
+
+The next time you start `chat-terminal`, it will create a new conversation session.
+
+## Text Completion Endpoints
 
 The following text completion endpoints are supported:
 
@@ -107,6 +170,11 @@ The following text completion endpoints are supported:
 - [Llama-cpp](#llama-cpp)
 - [OpenAI](#openai)
 - [Anthropic](#anthropic)
+
+There are two ways to configure the endpoints:
+
+1. Change th endpoint in the server configuration file `~/.config/chat-terminal/configs/chat_terminal.yaml`. This will be the default endpoint for all chat sessions.
+2. Set the environment variable `CHAT_TERMINAL_ENDPOINT` for the client. This will overwrite the default one specified in the server configuration file. You can change the endpoint flexibly for different chat sessions.
 
 ### Ollama
 
@@ -231,4 +299,5 @@ chat_terminal:
 
 ## About Prompt Template
 
-[Mext](https://github.com/Donny-Hikari/mext) is a powerful text template language designed for crafting prompts for LLM. It is used for composing the prompt template.
+This project use [Mext](https://github.com/Donny-Hikari/mext) for composing the prompt template.
+It is a powerful text template language designed for crafting prompts for LLM.
