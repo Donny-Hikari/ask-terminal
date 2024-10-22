@@ -87,9 +87,22 @@ build:
 # docker targets
 
 DOCKER_IMAGE_SOURCE_BRANCH ?=  # empty means copying the whole current repo
-DOCKER_FLAGS ?= --rm --net=host
+DOCKER_FLAGS ?= --net=host
+SERVER_IN_BACKGROUND ?= true
+SERVER_RESTART ?= always
 SERVER_PORT ?= 16099
 CLIENT_ENV ?=
+SERVER_ENV ?=
+
+DOCKER_SERVER_CONTAINER_NAME ?= chat-terminal-server
+DOCKER_CLIENT_CONTAINER_NAME ?= chat-terminal-client
+
+ifeq ($(SERVER_IN_BACKGROUND), true)
+# use separate flag to avoid affecting other targets
+SERVER_BACKGROUND_FLAG := -d
+else
+SERVER_BACKGROUND_FLAG :=
+endif
 
 .PHONY: docker-build-image docker-setup docker-run-server docker-run-client
 
@@ -114,8 +127,12 @@ docker-setup: docker-build-image
 
 docker-run-server: docker-build-image
 	@echo $(DOCKER_PHRASE) "Running server in docker..."
-	docker run $(DOCKER_FLAGS) -p $(SERVER_PORT):${SERVER_PORT} chat-terminal --host 0.0.0.0 --port $(SERVER_PORT)
+	if $$(docker ps -a -q --filter "name=$(DOCKER_SERVER_CONTAINER_NAME)" | grep -q .); then \
+		echo $(DOCKER_PHRASE) "Removing old server container..."; \
+		docker rm -f $(DOCKER_SERVER_CONTAINER_NAME) >/dev/null; \
+	fi
+	docker run --name $(DOCKER_SERVER_CONTAINER_NAME) $(DOCKER_FLAGS) $(SERVER_BACKGROUND_FLAG) --restart $(SERVER_RESTART) -p $(SERVER_PORT):$(SERVER_PORT) -e $(SERVER_ENV) chat-terminal --host 0.0.0.0 --port $(SERVER_PORT)
 
 docker-run-client: docker-build-image
 	@echo $(DOCKER_PHRASE) "Running client in docker..."
-	docker run -it $(DOCKER_FLAGS) --entrypoint /bin/bash chat-terminal -c 'source ~/.chat-terminal/chat-terminal.sh && $(CLIENT_ENV) chat-terminal'
+	docker run --name $(DOCKER_CLIENT_CONTAINER_NAME) -it $(DOCKER_FLAGS) --entrypoint /bin/bash chat-terminal -c 'source ~/.chat-terminal/chat-terminal.sh && $(CLIENT_ENV) chat-terminal'
