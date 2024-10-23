@@ -4,6 +4,15 @@ Chat with your terminal and get things done using natural language with the help
 
 ![Demo1](./demo/demo1.gif)
 
+- [Examples](#examples)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Text Completion Endpoints](#text-completion-endpoints)
+- [Start Chat Terminal Server at Startup (Locally)](#start-chat-terminal-server-at-startup-locally)
+- [Shell Client Options](#shell-client-options)
+- [Server Options](#server-options)
+- [About Prompt Template](#about-prompt-template)
+
 ## Examples
 
 ```console
@@ -122,6 +131,14 @@ Command> find ~/.config -name "keybindings.json"
 % Command finished
 Reply> The keybindings file is "/home/username/.config/Code/User/keybindings.json".
 ```
+
+Chat terminal can do a lot for you and if it fails, you can ask it to fix. Be creative. Some examples:
+
+1. Ask it to merge git branches for you.
+2. Check system status.
+3. Convert images or videos (ffmpeg is too hard for me):
+
+[![demo2.mp4](./demo/demo2.jpg)](https://github.com/user-attachments/assets/dc7a70d7-9bc4-4ddc-bd34-ad924bb4b2d7)
 
 ### Interactive Mode
 
@@ -247,9 +264,11 @@ Setup of Anthropic is similar to [OpenAI](#openai). The name of the endpoint is 
 
 For how to get an API key, see [Build with Claude \\ Anthropic](https://www.anthropic.com/api).
 
-## Start Chat Terminal Server at Startup
+## Start Chat Terminal Server at Startup (Locally)
 
 [services/chat-terminal-server.service](./services/chat-terminal-server.service) offers a template for starting Chat Terminal Server as a systemd service.
+
+> **Note:** If you [run the server in docker](#run-server-in-docker-and-client-locally) with `make docker-run-server`, you don't need to worry about this section as by default the server container is set to start automatically on startup.
 
 To install the service, first run:
 
