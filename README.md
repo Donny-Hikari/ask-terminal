@@ -132,7 +132,7 @@ Command> find ~/.config -name "keybindings.json"
 Reply> The keybindings file is "/home/username/.config/Code/User/keybindings.json".
 ```
 
-Chat terminal can do a lot for you and if it fails, you can ask it to fix. Be creative. Some examples:
+Chat terminal can do a lot for you and if it fails, you can ask it to fix. Go creative. Some examples:
 
 1. Ask it to merge git branches for you.
 2. Check system status.
@@ -178,6 +178,8 @@ $ chat-terminal-reset
 ```
 
 The next time you start `chat-terminal`, it will create a new conversation session.
+
+> **Note:** Some client environment variables required a `chat-terminal-reset` to be applied, such as `CHAT_TERMINAL_ENDPOINT` and `CHAT_TERMINAL_MODEL`.
 
 ## Text Completion Endpoints
 
@@ -291,11 +293,13 @@ The following environment variables can be used to configure the shell client:
 
 ```shell
 CHAT_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the chat-terminal-server
+CHAT_TERMINAL_ENDPOINT=  # text completion endpoint, default is what specified in the server config file
+CHAT_TERMINAL_MODEL=  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
 CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
-CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution, use with CHAT_TERMINAL_USE_BLACKLIST
-CHAT_TERMINAL_ENDPOINT=  # text completion endpoints, default is specified in the server config file
+CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution; patterns are matched using `grep -E`; use with CHAT_TERMINAL_USE_BLACKLIST
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
 CHAT_TERMINAL_USE_STREAMING=true  # stream the output
+CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
 ```
 
 ## Server Options
@@ -307,6 +311,7 @@ You can find all available options and their defaults in `SettingsChatTerminal` 
 ```yaml
 chat_terminal:
   endpoint: "local-llama"  # default text completion endpoint
+  model_name: None  # default model name, if the endpoint supports setting model; this will overwrite the endpoint's `model` field in `text_completion_endpoints`
   prompt: "prompts/chat-terminal.mext"  # prompt template
   use_thinking: True  # think before composing the command or not (chain of thought)
   max_observation_tokens: 1024  # truncate the output of command to this length before asking for a reply

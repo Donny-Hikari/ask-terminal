@@ -18,6 +18,7 @@ _logger = logging.getLogger(__name__)
 
 class ChatInitModel(BaseModel):
   endpoint: Optional[str] = None
+  model_name: Optional[str] = None
 
 class ChatQueryModel(BaseModel):
   message: str

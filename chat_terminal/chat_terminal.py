@@ -90,10 +90,12 @@ class ChatTerminal:
 
       return api_key
 
+    model_name = self._configs.model_name or self._tc_cfg.get('model', None)
+
     if self._tc_endpoint == 'ollama':
       self._tc = OllamaTextCompletion(
         server_url=self._tc_cfg['server_url'],
-        model_name=self._tc_cfg['model'],
+        model_name=model_name,
         logger=tc_logger,
       )
     elif self._tc_endpoint == 'local-llama':
@@ -104,14 +106,14 @@ class ChatTerminal:
     elif self._tc_endpoint == 'openai':
       api_key = load_api_key()
       self._tc = OpenAITextCompletion(
-        model_name=self._tc_cfg['model'],
+        model_name=model_name,
         api_key=api_key,
         logger=tc_logger,
       )
     elif self._tc_endpoint == 'anthropic':
       api_key = load_api_key()
       self._tc = AnthropicTextCompletion(
-        model_name=self._tc_cfg['model'],
+        model_name=model_name,
         api_key=api_key,
         logger=tc_logger,
         initial_system_msg=self._tc_cfg.get('initial_system_msg', None),

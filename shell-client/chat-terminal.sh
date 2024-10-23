@@ -3,11 +3,13 @@
 # environment variables
 
 CHAT_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the chat-terminal-server
+CHAT_TERMINAL_ENDPOINT=  # text completion endpoint, default is what specified in the server config file
+CHAT_TERMINAL_MODEL=  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
 CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
-CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution, use with CHAT_TERMINAL_USE_BLACKLIST
-CHAT_TERMINAL_ENDPOINT=  # text completion endpoints, default is specified in the server config file
+CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution; patterns are matched using `grep -E`; use with CHAT_TERMINAL_USE_BLACKLIST
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
 CHAT_TERMINAL_USE_STREAMING=true  # stream the output
+CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
 
 # internal variables
 
@@ -93,6 +95,9 @@ _init_conversation() {
   local data="{"
   if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
     data+="\"endpoint\": \"$CHAT_TERMINAL_ENDPOINT\""
+  fi
+  if [[ -n "$CHAT_TERMINAL_MODEL" ]]; then
+    data+="\"model_name\": \"$CHAT_TERMINAL_MODEL\""
   fi
   data+="}"
 
@@ -406,7 +411,7 @@ _chat_once() {
   fi
 
   if $CHAT_TERMINAL_USE_REPLY; then
-    if ! $exec_command && [[ ${#_command} -gt 0 ]]; then
+    if $CHAT_TERMINAL_USE_CLARIFICATION && ! $exec_command && [[ ${#_command} -gt 0 ]]; then
       _advance_read -p "Clarification: " observation
     fi
 
