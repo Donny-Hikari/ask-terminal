@@ -11,6 +11,7 @@ Chat with your terminal and get things done using natural language with the help
 - [Start Chat Terminal Server at Startup (Locally)](#start-chat-terminal-server-at-startup-locally)
 - [Shell Client Options](#shell-client-options)
 - [Server Options](#server-options)
+- [More Examples](#more-examples)
 - [About Prompt Template](#about-prompt-template)
 
 ## Examples
@@ -46,10 +47,6 @@ This will (re)build the image (with name `chat-terminal`) and run the server in 
 
 Replace `<YOUR_API_KEY>` with your OpenAI API key. You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
 
-> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` to turn off the replying-to-result feature.
->
-> It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
-
 Then install the client locally with:
 
 ```shell
@@ -64,6 +61,10 @@ alias ask=chat-terminal
 ```
 
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
+
+> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
+>
+> It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
 
 ### Local Setup
 
@@ -88,13 +89,13 @@ $ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
 
 Replace `<YOUR_API_KEY>` with your OpenAI API key. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key. You may use a credential file as well, see [OpenAI](#openai).
 
-> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` to turn off the replying-to-result feature.
->
-> It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
-
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
 
-Note: You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
+> **Note:** You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
+
+> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
+>
+> It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
 
 ### Run Client in Docker
 
@@ -118,6 +119,8 @@ Command> cd ~/
 % Execute the command? (y/[N]) y
 % Command finished
 Reply> The system has changed its current folder to your home directory.
+$ pwd
+/home/username
 ```
 
 Or simply `ask` (if you have set the alias):
@@ -132,7 +135,9 @@ Command> find ~/.config -name "keybindings.json"
 Reply> The keybindings file is "/home/username/.config/Code/User/keybindings.json".
 ```
 
-Chat terminal can do a lot for you and if it fails, you can ask it to fix. Go creative. Some examples:
+Chat terminal can do a lot for you and if it fails, you can ask it to fix. Go creative.
+
+Some examples:
 
 1. Ask it to merge git branches for you.
 2. Check system status.
@@ -165,11 +170,11 @@ Reply> The program using port 16099 is "chat-terminal-s".
 >
 ```
 
-### Advance Usage
+### Configuration
 
 Refers to [Shell Client Options](#shell-client-options) and [Server Options](#server-options) for more options to configure.
 
-#### Reset Chat Session
+### Reset Chat Session
 
 You can reset the chat session with the following command:
 
@@ -222,7 +227,7 @@ $ ollama pull llama3.1
 
 ### Llama-cpp
 
-Change the endpoint to `local-llama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use llama-cpp for text completion.
+Change the endpoint to `local-llama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use [llama-cpp](https://github.com/ggerganov/llama.cpp) for text completion.
 
 ```yaml
 chat_terminal:
@@ -230,6 +235,13 @@ chat_terminal:
 ```
 
 By default, llama-cpp server is expected at `http://127.0.0.1:40080`. `text_completion_endpoints.local-llama` contains the configuration for this endpoint.
+
+```yaml
+text_completion_endpoints:
+  local-llama:
+    server_url: "http://127.0.0.1:40080"
+    # ... other configuration options
+```
 
 ### OpenAI
 
@@ -254,7 +266,7 @@ Then add the credential file to `~/.config/chat-terminal/configs/chat_terminal.y
 text_completion_endpoints:
   openai:
     model: gpt-3.5-turbo
-    credential_file: credentials/openai.yaml  # or specify the full path
+    credential_file: credentials/openai.yaml  # it will search ~/.config/chat-terminal; you can specify the full path as well
     # ... other configuration options
 ```
 
@@ -302,16 +314,22 @@ CHAT_TERMINAL_USE_STREAMING=true  # stream the output
 CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
 ```
 
+You may use `export CHAT_TERMINAL_*=...` before hand or prepend the environment variables `CHAT_TERMINAL_*=...` to the client `chat-terminal` (or `ask`) command to use them.
+
+```shell
+$ CHAT_TERMINAL_ENDPOINT=ollama CHAT_TERMINAL_MODEL=llama3.2 ask who am i
+```
+
 ## Server Options
 
 Options for the chat terminal server is provided via the `chat_terminal` section in the config file `~/.config/chat-terminal/configs/chat_terminal.yaml`.
 
-You can find all available options and their defaults in `SettingsChatTerminal` class in [chat_terminal/settings.py](./chat_terminal/settings.py).
+You can find all available options and their defaults in the `SettingsChatTerminal` class in [chat_terminal/settings.py](./chat_terminal/settings.py).
 
 ```yaml
 chat_terminal:
   endpoint: "local-llama"  # default text completion endpoint
-  model_name: None  # default model name, if the endpoint supports setting model; this will overwrite the endpoint's `model` field in `text_completion_endpoints`
+  model_name: null  # default model name, if the endpoint supports setting model; this will overwrite the endpoint's `model` field in `text_completion_endpoints`
   prompt: "prompts/chat-terminal.mext"  # prompt template
   use_thinking: True  # think before composing the command or not (chain of thought)
   max_observation_tokens: 1024  # truncate the output of command to this length before asking for a reply
@@ -320,6 +338,61 @@ chat_terminal:
   user: "User"  # name of the user
   agent: "Assistant"  # name of the agent
 ```
+
+## More examples
+
+```console
+$ ask which program answers the meaning of life
+Thought> Since the user is looking for something related to "meaning of life", I'll think about programs or data that could possibly be related.
+Command> echo -n '42' | xargs python3 -c "import this; print(this.s)"
+% Execute the command? (y/[N]) y
+The Zen of Python, by Tim Peters
+
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Although that way may not be obvious at first unless you're Dutch.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+Namespaces are one honking great idea -- let's do more of those!
+Gur Mra bs Clguba, ol Gvz Crgref
+
+Ornhgvshy vf orggre guna htyl.
+Rkcyvpvg vf orggre guna vzcyvpvg.
+Fvzcyr vf orggre guna pbzcyrk.
+Pbzcyrk vf orggre guna pbzcyvpngrq.
+Syng vf orggre guna arfgrq.
+Fcnefr vf orggre guna qrafr.
+Ernqnovyvgl pbhagf.
+Fcrpvny pnfrf nera'g fcrpvny rabhtu gb oernx gur ehyrf.
+Nygubhtu cenpgvpnyvgl orngf chevgl.
+Reebef fubhyq arire cnff fvyragyl.
+Hayrff rkcyvpvgyl fvyraprq.
+Va gur snpr bs nzovthvgl, ershfr gur grzcgngvba gb thrff.
+Gurer fubhyq or bar-- naq cersrenoyl bayl bar --boivbhf jnl gb qb vg.
+Nygubhtu gung jnl znl abg or boivbhf ng svefg hayrff lbh'er Qhgpu.
+Abj vf orggre guna arire.
+Nygubhtu arire vf bsgra orggre guna *evtug* abj.
+Vs gur vzcyrzragngvba vf uneq gb rkcynva, vg'f n onq vqrn.
+Vs gur vzcyrzragngvba vf rnfl gb rkcynva, vg znl or n tbbq vqrn.
+Anzrfcnprf ner bar ubaxvat terng vqrn -- yrg'f qb zber bs gubfr!
+% Command finished
+Reply> 42 is the answer to the meaning of life according to The Hitchhiker's Guide to the Galaxy. However, it seems that there are multiple answers provided by 'import this'. I'll consider other possible programs related to the meaning of life.
+```
+
+> **Author Note:** I don't even know there is a builtin package called `this` in Python, let alone the poem.
 
 ## About Prompt Template
 
