@@ -39,7 +39,7 @@ Reply> The program using the most cpu resource is "ollama_llama_se". Its pid and
 Start the server in docker with command:
 
 ```shell
-$ make docker-run-server -B SERVER_ENV=OPENAI_API_KEY=<YOUR_API_KEY>
+$ make docker-run-server DOCKER_SERVER_FLAGS=--net=host\ -d\ -e\ OPENAI_API_KEY=<YOUR_API_KEY>
 ```
 
 This will (re)build the image (with name `chat-terminal`) and run the server in the background (with container name `chat-terminal-server`).
@@ -101,7 +101,7 @@ Note: You may use other text completion endpoints other than `openai`, such as `
 You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Chat Terminal - to help you find and execute commands in your environment. Therefor this method mainly for test purpose.
 
 ```shell
-$ make docker-run-client -B CLIENT_ENV=CHAT_TERMINAL_USE_BLACKLIST=true
+$ make docker-run-client CLIENT_ENV=CHAT_TERMINAL_USE_BLACKLIST=true
 ```
 
 `CHAT_TERMINAL_USE_BLACKLIST=true` allows the client to run commands that are not in the blacklist without confirmation. Use `CHAT_TERMINAL_BLACKLIST_PATTERN` to set the blacklist pattern (grep pattern matching).

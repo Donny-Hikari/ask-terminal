@@ -20,6 +20,9 @@ class ChatInitModel(BaseModel):
   endpoint: Optional[str] = None
   model_name: Optional[str] = None
 
+  class Config:
+      protected_namespaces = ()
+
 class ChatQueryModel(BaseModel):
   message: str
   stream: bool = False

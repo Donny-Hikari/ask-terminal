@@ -14,6 +14,9 @@ class SettingsChatTerminal(BaseModel):
   user: str = Field("User", help="name of the user")
   agent: str = Field("Assistant", help="name of the agent")
 
+  class Config:
+      protected_namespaces = ()
+
 class Settings(BaseModel):
   chat_terminal: SettingsChatTerminal = SettingsChatTerminal()
   text_completion_endpoints: Dict[str, Dict] = {}
