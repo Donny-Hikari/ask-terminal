@@ -67,28 +67,39 @@ _ensure_bool() {
   local default=$2
   local original_val=
 
-  if [[ -n $BASH_VERSION ]]; then
+  if [[ -n $BASH_VERSION ]] && ( printf '%s\n' "$version" "3.2" | sort -Vr | head -n1 | grep -vq "3.2" ); then
     declare -n varref=$1
     original_val=$varref
-    if [[ "$varref" == true || "$varref" == false ]]; then
+    if [[ "$original_val" == true || "$original_val" == false ]]; then
       return 0
     else
       varref=$default
-      echo "$varname=$original_val is not a valid boolean, reset to default as $default"
-      return 1
     fi
   elif [[ -n $ZSH_VERSION ]]; then
     # seriously when will zsh support declare -n
     local varname=$1
     original_val=${(P)varname}
-    if [[ "${(P)varname}" == true || "${(P)varname}" == false ]]; then
+    if [[ "$original_val" == true || "$original_val" == false ]]; then
       return 0
     else
       ${(P)varname::=$default}
-      echo "$varname=$original_val is not a valid boolean, reset to default as $default"
-      return 1
+    fi
+  else
+    local varname=$1
+    original_val=${!varname}
+    if [[ "$original_val" == true || "$original_val" == false ]]; then
+      return 0
+    else
+      eval "$varname="'"$default"'
     fi
   fi
+
+  echo "$varname=$original_val is not a valid boolean, reset to default as $default"
+  return 1
+}
+
+_json_dumps() {
+  python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))"
 }
 
 # APIs
@@ -135,8 +146,12 @@ _init_conversation() {
 
 _query_command() {
   local query="$1"
-  local data="{ \
-    \"message\": \"$query\", \
+  local data
+
+  query=$(echo -ne "$query" | _json_dumps)
+
+  data="{ \
+    \"message\": $query, \
     \"stream\": $CHAT_TERMINAL_USE_STREAMING, \
     \"env\": $(_get_env)
   }"
@@ -150,11 +165,11 @@ _query_reply() {
   local observation="$2"
   local data
 
-  observation=$(echo -ne "$observation" | python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))")
+  observation=$(echo -ne "$observation" | _json_dumps)
 
   data="{ \
     \"command_executed\": $executed, \
-    \"message\": $(echo -E "$observation"), \
+    \"message\": $observation, \
     \"stream\": $CHAT_TERMINAL_USE_STREAMING, \
     \"env\": $(_get_env)
   }"
@@ -414,9 +429,12 @@ _chat_once() {
       if [[ -n $BASH_VERSION ]]; then
         { tail -n +1 -f $memfile & } 2>/dev/null
       elif [[ -n $ZSH_VERSION ]]; then
-        (tail -n +1 -f $memfile ) &!
+        # the following is not compatible with bash 3.2
+        # ( tail -n +1 -f $memfile ) &|
+        setopt LOCAL_OPTIONS NO_NOTIFY NO_MONITOR
+        ( tail -n +1 -f $memfile ) &
       else
-        (tail -n +1 -f $memfile) &
+        tail -n +1 -f $memfile &
       fi
       display_job=$!
     fi
