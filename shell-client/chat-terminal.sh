@@ -10,6 +10,7 @@ CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before exe
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
 CHAT_TERMINAL_USE_STREAMING=true  # stream the output
 CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
+CHAT_TERMINAL_REFUSE_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
 
 # internal variables
 
@@ -32,8 +33,6 @@ _advance_read() {
     read "$@"
   fi
 }
-
-# APIs
 
 _get_os_version() {
   if [ -f /etc/os-release ]; then
@@ -63,6 +62,36 @@ _get_env() {
     \"shell\": \"$shell_name\" \
   }"
 }
+
+_ensure_bool() {
+  local default=$2
+  local original_val=
+
+  if [[ -n $BASH_VERSION ]]; then
+    declare -n varref=$1
+    original_val=$varref
+    if [[ "$varref" == true || "$varref" == false ]]; then
+      return 0
+    else
+      varref=$default
+      echo "$varname=$original_val is not a valid boolean, reset to default as $default"
+      return 1
+    fi
+  elif [[ -n $ZSH_VERSION ]]; then
+    # seriously when will zsh support declare -n
+    local varname=$1
+    original_val=${(P)varname}
+    if [[ "${(P)varname}" == true || "${(P)varname}" == false ]]; then
+      return 0
+    else
+      ${(P)varname::=$default}
+      echo "$varname=$original_val is not a valid boolean, reset to default as $default"
+      return 1
+    fi
+  fi
+}
+
+# APIs
 
 _curl_server() {
   local url="$1"
@@ -366,6 +395,16 @@ _chat_once() {
     fi
   fi
 
+  if $exec_command || $CHAT_TERMINAL_REFUSE_COMMAND_HISTORY; then
+    if [[ -n $BASH_VERSION ]]; then
+      history -s "$_command"
+    elif [[ -n $ZSH_VERSION ]]; then
+      print -s "$_command"
+    else
+      history -s "$_command"
+    fi
+  fi
+
   if $exec_command; then
     # workaround to avoid pipe and subshell to
     # ensure execution in current shell
@@ -380,14 +419,6 @@ _chat_once() {
         (tail -n +1 -f $memfile) &
       fi
       display_job=$!
-    fi
-
-    if [[ -n $BASH_VERSION ]]; then
-      history -s "$_command"
-    elif [[ -n $ZSH_VERSION ]]; then
-      print -s "$_command"
-    else
-      history -s "$_command"
     fi
 
     if $CHAT_TERMINAL_USE_REPLY; then
@@ -451,6 +482,14 @@ _chat_once() {
   fi
 }
 
+_check_env_vars() {
+  _ensure_bool CHAT_TERMINAL_USE_BLACKLIST false
+  _ensure_bool CHAT_TERMINAL_USE_REPLY true
+  _ensure_bool CHAT_TERMINAL_USE_STREAMING true
+  _ensure_bool CHAT_TERMINAL_USE_CLARIFICATION true
+  _ensure_bool CHAT_TERMINAL_REFUSE_COMMAND_HISTORY true
+}
+
 chat-terminal-reset() {
   _conversation_id=
 }
@@ -461,6 +500,8 @@ chat-terminal() {
   local _status
   local error
   local ret_code
+
+  _check_env_vars
 
   if [[ -z "$_conversation_id" ]]; then
     if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then

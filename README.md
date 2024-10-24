@@ -312,6 +312,7 @@ CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before exe
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
 CHAT_TERMINAL_USE_STREAMING=true  # stream the output
 CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
+CHAT_TERMINAL_REFUSE_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
 ```
 
 You may use `export CHAT_TERMINAL_*=...` before hand or prepend the environment variables `CHAT_TERMINAL_*=...` to the client `chat-terminal` (or `ask`) command to use them.
