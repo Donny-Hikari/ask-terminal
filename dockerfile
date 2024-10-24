@@ -1,5 +1,5 @@
-FROM ubuntu:20.04
-FROM python:3.10
+ARG BASE_IMAGE=python:3.10
+FROM ${BASE_IMAGE}
 
 ARG REPO_ARCHIVE=.
 
