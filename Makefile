@@ -99,7 +99,7 @@ DOCKER_CLIENT_IMAGE_NAME  ?= chat-terminal-client
 DOCKER_SERVER_CONTAINER_NAME ?= chat-terminal-server
 DOCKER_CLIENT_CONTAINER_NAME ?= chat-terminal-client
 
-.PHONY: docker-build-image docker-setup docker-run-server docker-run-client
+.PHONY: docker-build-image docker-setup docker-run-server docker-rm-server docker-run-client
 
 docker-build-image:
 	if [ -z "$(DOCKER_IMAGE_NAME)" ]; then \
@@ -123,16 +123,19 @@ endif
 docker-setup: docker-build-image
 	@echo $(DOCKER_PHRASE) "Running setup in docker..."
 
-docker-run-server: DOCKER_IMAGE_NAME = $(DOCKER_SERVER_IMAGE_NAME):latest
-docker-run-server: docker-build-image
+docker-run-server: DOCKER_IMAGE_NAME = $(DOCKER_SERVER_IMAGE_NAME)
+docker-run-server: docker-rm-server docker-build-image
 	@echo $(DOCKER_PHRASE) "Running server in docker..."
+	docker run --name $(DOCKER_SERVER_CONTAINER_NAME) $(DOCKER_SERVER_FLAGS) --restart $(SERVER_RESTART) -p $(SERVER_PORT):$(SERVER_PORT) $(DOCKER_IMAGE_NAME) --host 0.0.0.0 --port $(SERVER_PORT)
+
+docker-rm-server: DOCKER_IMAGE_NAME = $(DOCKER_SERVER_IMAGE_NAME)
+docker-rm-server:
 	if $$(docker ps -a -q --filter "name=$(DOCKER_SERVER_CONTAINER_NAME)" | grep -q .); then \
 		echo $(DOCKER_PHRASE) "Removing old server container..."; \
 		docker rm -f $(DOCKER_SERVER_CONTAINER_NAME) >/dev/null; \
 	fi
-	docker run --name $(DOCKER_SERVER_CONTAINER_NAME) $(DOCKER_SERVER_FLAGS) --restart $(SERVER_RESTART) -p $(SERVER_PORT):$(SERVER_PORT) $(DOCKER_IMAGE_NAME) --host 0.0.0.0 --port $(SERVER_PORT)
 
-docker-run-client: DOCKER_IMAGE_NAME = $(DOCKER_CLIENT_IMAGE_NAME):latest
+docker-run-client: DOCKER_IMAGE_NAME = $(DOCKER_CLIENT_IMAGE_NAME)
 docker-run-client: docker-build-image
 	@echo $(DOCKER_PHRASE) "Running client in docker..."
 	docker run --name $(DOCKER_CLIENT_CONTAINER_NAME) -it $(DOCKER_CLIENT_FLAGS) --entrypoint /bin/bash $(DOCKER_IMAGE_NAME) -c 'source ~/.chat-terminal/chat-terminal.sh && $(CLIENT_ENV) chat-terminal'
