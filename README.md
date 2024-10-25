@@ -53,14 +53,22 @@ Then install the client locally with:
 $ make install-client
 ```
 
-Add this to your shell config file (`~/.bashrc` or `~/.zshrc`):
+Add chat-terminal to your shell config file by running:
+
+```shel
+$ make install-shell-rc
+```
+
+You may edit the shell config file yourself (`~/.bashrc` or `~/.zshrc`). Add these lines:
 
 ```shell
-source ~/.chat-terminal/chat-terminal.sh
+source $HOME/.chat-terminal/chat-terminal.sh
 alias ask=chat-terminal
 ```
 
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
+
+> **Note:** You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
 > **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
 >
@@ -74,13 +82,6 @@ First setup with this command:
 $ make setup
 ```
 
-Add this to your shell config file (`~/.bashrc` or `~/.zshrc`):
-
-```shell
-source ~/.chat-terminal/chat-terminal.sh
-alias ask=chat-terminal
-```
-
 Start the server:
 
 ```shell
@@ -88,6 +89,19 @@ $ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
 ```
 
 Replace `<YOUR_API_KEY>` with your OpenAI API key. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key. You may use a credential file as well, see [OpenAI](#openai).
+
+Add chat-terminal to your shell config file by running:
+
+```shel
+$ make install-shell-rc
+```
+
+You may edit the shell config file yourself (`~/.bashrc` or `~/.zshrc`). Add these lines:
+
+```shell
+source $HOME/.chat-terminal/chat-terminal.sh
+alias ask=chat-terminal
+```
 
 Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
 
@@ -312,7 +326,7 @@ CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before exe
 CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
 CHAT_TERMINAL_USE_STREAMING=true  # stream the output
 CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
-CHAT_TERMINAL_REFUSE_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
+CHAT_TERMINAL_REFUSED_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
 ```
 
 You may use `export CHAT_TERMINAL_*=...` before hand or prepend the environment variables `CHAT_TERMINAL_*=...` to the client `chat-terminal` (or `ask`) command to use them.

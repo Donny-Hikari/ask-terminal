@@ -6,12 +6,12 @@ ARG REPO_ARCHIVE=.
 WORKDIR /chat-terminal
 
 ADD ${REPO_ARCHIVE} ./
-RUN mkdir -p ./locals
-COPY locals/chat_terminal.yaml ./locals/
 
 RUN apt-get update
 RUN apt-get install -y jq uuid-runtime
 
-RUN make setup
+RUN make install-client install-shell-rc
 
-ENTRYPOINT ["chat-terminal-server"]
+ENV CLIENT_ENV=
+
+CMD ["bash", "-ic", "export ${CLIENT_ENV}; chat-terminal"]

@@ -7,6 +7,7 @@ DOCKER_PHRASE ?= "@>"
 COPY_OVERWRITE ?= false
 COPY_FLAG ?= -vr
 SHELL_CLIENT_DEST ?= $(HOME)/.chat-terminal/chat-terminal.sh
+SHELL_RCFILE ?= $(HOME)/.bashrc
 CONFIGS_DIR ?= $(HOME)/.config/chat-terminal
 CONFIG_FILE_SOURCE ?= configs/chat_terminal.yaml
 
@@ -39,6 +40,13 @@ install-scripts: shell-client/chat-terminal.sh
 	@echo $(PHRASE) "Installing scripts..."
 	mkdir -p "$$(dirname $(SHELL_CLIENT_DEST))"
 	cp $(COPY_FLAG) shell-client/chat-terminal.sh $(SHELL_CLIENT_DEST)
+
+install-shell-rc:
+	@echo $(PHRASE) "Appending to shell runtime configuration..."
+	echo >> $(SHELL_RCFILE)
+	echo "# added by chat-terminal" >> $(SHELL_RCFILE)
+	echo "source \"$(SHELL_CLIENT_DEST)\"" >> $(SHELL_RCFILE)
+	echo "alias ask=chat-terminal" >> $(SHELL_RCFILE)
 
 pre-install-configs:
 	@echo $(PHRASE) "Installing config files..."
@@ -94,8 +102,10 @@ SERVER_RESTART ?= always
 SERVER_PORT ?= 16099
 CLIENT_ENV ?=
 
+DOCKER_SERVER_FILE ?= docker/server.dockerfile
+DOCKER_CLIENT_FILE ?= docker/client.dockerfile
 DOCKER_SERVER_IMAGE_NAME ?= chat-terminal-server
-DOCKER_CLIENT_IMAGE_NAME  ?= chat-terminal-client
+DOCKER_CLIENT_IMAGE_NAME ?= chat-terminal-client
 DOCKER_SERVER_CONTAINER_NAME ?= chat-terminal-server
 DOCKER_CLIENT_CONTAINER_NAME ?= chat-terminal-client
 
@@ -112,30 +122,31 @@ ifneq ($(DOCKER_IMAGE_SOURCE_BRANCH),)
 	mkdir -p ./tmp
 	tmp_git_archive=$$(mktemp ./tmp/chat-terminal-repo-archive-XXXXXX.tar.gz) &&	\
 		git archive --format=tar.gz -o $$tmp_git_archive master && \
-		docker build -t $(DOCKER_IMAGE_NAME) --build-arg REPO_ARCHIVE=$$tmp_git_archive $(DOCKER_BUILD_FLAGS) . && \
+		docker build -t $(DOCKER_IMAGE_NAME) --build-arg REPO_ARCHIVE=$$tmp_git_archive $(DOCKER_BUILD_FLAGS) -f $(DOCKER_FILE) . && \
 		rm $$tmp_git_archive
 	rm -d ./tmp 2>/dev/null || true
 else
 # build from the current repo
-	docker build -t $(DOCKER_IMAGE_NAME) $(DOCKER_BUILD_FLAGS) .
+	docker build -t $(DOCKER_IMAGE_NAME) $(DOCKER_BUILD_FLAGS) -f $(DOCKER_FILE) .
 endif
 
 docker-setup: docker-build-image
 	@echo $(DOCKER_PHRASE) "Running setup in docker..."
 
+docker-run-server: DOCKER_FILE = $(DOCKER_SERVER_FILE)
 docker-run-server: DOCKER_IMAGE_NAME = $(DOCKER_SERVER_IMAGE_NAME)
 docker-run-server: docker-rm-server docker-build-image
 	@echo $(DOCKER_PHRASE) "Running server in docker..."
 	docker run --name $(DOCKER_SERVER_CONTAINER_NAME) $(DOCKER_SERVER_FLAGS) --restart $(SERVER_RESTART) -p $(SERVER_PORT):$(SERVER_PORT) $(DOCKER_IMAGE_NAME) --host 0.0.0.0 --port $(SERVER_PORT)
 
-docker-rm-server: DOCKER_IMAGE_NAME = $(DOCKER_SERVER_IMAGE_NAME)
 docker-rm-server:
 	if $$(docker ps -a -q --filter "name=$(DOCKER_SERVER_CONTAINER_NAME)" | grep -q .); then \
 		echo $(DOCKER_PHRASE) "Removing old server container..."; \
 		docker rm -f $(DOCKER_SERVER_CONTAINER_NAME) >/dev/null; \
 	fi
 
+docker-run-client: DOCKER_FILE = $(DOCKER_CLIENT_FILE)
 docker-run-client: DOCKER_IMAGE_NAME = $(DOCKER_CLIENT_IMAGE_NAME)
 docker-run-client: docker-build-image
 	@echo $(DOCKER_PHRASE) "Running client in docker..."
-	docker run --name $(DOCKER_CLIENT_CONTAINER_NAME) -it $(DOCKER_CLIENT_FLAGS) --entrypoint /bin/bash $(DOCKER_IMAGE_NAME) -c 'source ~/.chat-terminal/chat-terminal.sh && $(CLIENT_ENV) chat-terminal'
+	docker run --name $(DOCKER_CLIENT_CONTAINER_NAME) -it $(DOCKER_CLIENT_FLAGS) -e CLIENT_ENV="$(CLIENT_ENV)" $(DOCKER_IMAGE_NAME)

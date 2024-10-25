@@ -2,15 +2,15 @@
 
 # environment variables
 
-CHAT_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the chat-terminal-server
-CHAT_TERMINAL_ENDPOINT=  # text completion endpoint, default is what specified in the server config file
-CHAT_TERMINAL_MODEL=  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
-CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
-CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution; patterns are matched using `grep -E`; use with CHAT_TERMINAL_USE_BLACKLIST
-CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
-CHAT_TERMINAL_USE_STREAMING=true  # stream the output
-CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
-CHAT_TERMINAL_REFUSE_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
+CHAT_TERMINAL_SERVER_URL=${CHAT_TERMINAL_SERVER_URL:-"http://localhost:16099"}  # url of the chat-terminal-server
+CHAT_TERMINAL_ENDPOINT=${CHAT_TERMINAL_ENDPOINT:-}  # text completion endpoint, default is what specified in the server config file
+CHAT_TERMINAL_MODEL=${CHAT_TERMINAL_MODEL:-}  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
+CHAT_TERMINAL_USE_BLACKLIST=${CHAT_TERMINAL_USE_BLACKLIST:-false}  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
+CHAT_TERMINAL_BLACKLIST_PATTERN=${CHAT_TERMINAL_BLACKLIST_PATTERN:-"\b(rm|sudo)\b"}  # pattern to confirm before execution; patterns are matched using `grep -E`; use with CHAT_TERMINAL_USE_BLACKLIST
+CHAT_TERMINAL_USE_REPLY=${CHAT_TERMINAL_USE_REPLY:-true}  # send the output of command to the server to get a reply
+CHAT_TERMINAL_USE_STREAMING=${CHAT_TERMINAL_USE_STREAMING:-true}  # stream the output
+CHAT_TERMINAL_USE_CLARIFICATION=${CHAT_TERMINAL_USE_CLARIFICATION:-true}  # ask for clarification when refusing a command
+CHAT_TERMINAL_REFUSED_COMMAND_HISTORY=${CHAT_TERMINAL_REFUSED_COMMAND_HISTORY:-true}   # add commands to the history even if it gets refused
 
 # internal variables
 
@@ -410,7 +410,7 @@ _chat_once() {
     fi
   fi
 
-  if $exec_command || $CHAT_TERMINAL_REFUSE_COMMAND_HISTORY; then
+  if $exec_command || $CHAT_TERMINAL_REFUSED_COMMAND_HISTORY; then
     if [[ -n $BASH_VERSION ]]; then
       history -s "$_command"
     elif [[ -n $ZSH_VERSION ]]; then
@@ -505,7 +505,7 @@ _check_env_vars() {
   _ensure_bool CHAT_TERMINAL_USE_REPLY true
   _ensure_bool CHAT_TERMINAL_USE_STREAMING true
   _ensure_bool CHAT_TERMINAL_USE_CLARIFICATION true
-  _ensure_bool CHAT_TERMINAL_REFUSE_COMMAND_HISTORY true
+  _ensure_bool CHAT_TERMINAL_REFUSED_COMMAND_HISTORY true
 }
 
 chat-terminal-reset() {

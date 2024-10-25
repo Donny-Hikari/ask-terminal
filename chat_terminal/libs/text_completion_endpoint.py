@@ -1,4 +1,5 @@
 import json
+import aiohttp.http_exceptions
 import openai
 import requests
 import os
@@ -308,7 +309,7 @@ class AnthropicTextCompletion(TextCompletionBase):
     return reply
 
 class OllamaTextCompletion(TextCompletionBase):
-  def __init__(self, server_url, model_name, logger=None):
+  def __init__(self, server_url, model_name, logger: logging.Logger=None):
     self.server_url = server_url
     self.model_name = model_name
     self.logger = logger
@@ -377,10 +378,10 @@ class OllamaTextCompletion(TextCompletionBase):
         if 'error' in res:
           raise RuntimeError(res['error'])
 
-        return res['prompt_eval_count']
+        return res.get('prompt_eval_count', 0)
 
   async def _truncate_count_tokens(self, content):
     try:
       return await self.count_tokens(content, truncate=False)
-    except Exception:
+    except aiohttp.ClientError:
       return math.inf
