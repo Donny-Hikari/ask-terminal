@@ -64,19 +64,25 @@ copy-configs: make-configs-dir
 copy-credentials: make-configs-dir
 	[ -e credentials ] && cp $(COPY_FLAG) credentials $(CONFIGS_DIR) || true
 
-uninstall: delete-all-configs delete-all-scripts
+uninstall:
 	pip uninstall -y chat-terminal
 
 delete-all-configs:
-	rm -rf $(CONFIGS_DIR)
+	rm -rf "$(CONFIGS_DIR)"
 
 delete-all-scripts:
-	rm -f $(HOME)/.dsh/.dshrc.d/chat-terminal.dshrc
+	rm -f $(SHELL_CLIENT_DEST)
+	client_dir=$$(dirname $(SHELL_CLIENT_DEST)) && \
+		[ -d $${client_dir} ] && \
+		! ( find "$${client_dir}" -mindepth 1 | grep -qE '.' ) && \
+		rm -df "$${client_dir}" && \
+		echo "Empty shell client directory \"$${client_dir}\" removed" \
+		|| true
 
 clean:
 	rm -rdf build dist chat_terminal.egg-info
 
-purge: uninstall clean
+purge: uninstall delete-all-configs delete-all-scripts
 
 # advance targets
 
