@@ -8,7 +8,6 @@ Chat with your terminal and get things done using natural language with the help
 - [Installation](#installation)
 - [Usage](#usage)
 - [Text Completion Endpoints](#text-completion-endpoints)
-- [Start Chat Terminal Server at Startup (Locally)](#start-chat-terminal-server-at-startup-locally)
 - [Shell Client Options](#shell-client-options)
 - [Server Options](#server-options)
 - [More Examples](#more-examples)
@@ -184,6 +183,27 @@ Reply> The program using port 16099 is "chat-terminal-s".
 >
 ```
 
+### Start Chat Terminal Server at Startup (Locally)
+
+[services/chat-terminal-server.service](./services/chat-terminal-server.service) offers a template for starting Chat Terminal Server as a systemd service.
+
+> **Note:** If you [run the server in docker](#run-server-in-docker-and-client-locally) with `make docker-run-server`, you don't need to worry about this section as by default the server container is set to start automatically on startup.
+
+To install the service, first run:
+
+```shell
+$ make install-service
+```
+
+Then edit `~/.config/systemd/user/chat-terminal-server.service` as you need.
+
+Finally, enable (and start) the service with:
+
+```shell
+$ systemctl --user daemon-reload
+$ systemctl --user enable --now chat-terminal-server.service
+```
+
 ### Configuration
 
 Refers to [Shell Client Options](#shell-client-options) and [Server Options](#server-options) for more options to configure.
@@ -291,27 +311,6 @@ For how to get an API key, see [Quickstart tutorial - OpenAI API](https://platfo
 Setup of Anthropic is similar to [OpenAI](#openai). The name of the endpoint is `anthropic`. The API key is stored in environment variable `ANTHROPIC_API_KEY`, or in credential file `~/.config/chat-terminal/credentials/anthropic.yaml`.
 
 For how to get an API key, see [Build with Claude \\ Anthropic](https://www.anthropic.com/api).
-
-## Start Chat Terminal Server at Startup (Locally)
-
-[services/chat-terminal-server.service](./services/chat-terminal-server.service) offers a template for starting Chat Terminal Server as a systemd service.
-
-> **Note:** If you [run the server in docker](#run-server-in-docker-and-client-locally) with `make docker-run-server`, you don't need to worry about this section as by default the server container is set to start automatically on startup.
-
-To install the service, first run:
-
-```shell
-$ make install-service
-```
-
-Then edit `~/.config/systemd/user/chat-terminal-server.service` as you need.
-
-Finally, enable (and start) the service with:
-
-```shell
-$ systemctl --user daemon-reload
-$ systemctl --user enable --now chat-terminal-server.service
-```
 
 ## Shell Client Options
 
