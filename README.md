@@ -1,4 +1,4 @@
-# Ask terminal
+# Ask-terminal
 
 Chat with your terminal and get things done using natural language with the help of LLM (Large Language Model).
 
@@ -116,7 +116,7 @@ Start a new terminal, and run `ask-terminal` or `ask`. Enjoy!
 
 ### Run Client in Docker
 
-You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Ask terminal - to help you find and execute commands in your environment. Therefore this method mainly for test purpose.
+You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Ask-terminal - to help you find and execute commands in your environment. Therefore this method mainly for test purpose.
 
 ```shell
 $ make docker-run-client CLIENT_ENV=ASK_TERMINAL_USE_BLACKLIST=true
@@ -152,7 +152,7 @@ Command> find ~/.config -name "keybindings.json"
 Reply> The keybindings file is "/home/username/.config/Code/User/keybindings.json".
 ```
 
-Ask terminal can do a lot for you and if it fails, you can ask it to fix. Go creative.
+Ask-terminal can do a lot for you and if it fails, you can ask it to fix. Go creative.
 
 Some examples:
 
@@ -187,9 +187,9 @@ Reply> The program using port 16099 is "ask-terminal-s".
 >
 ```
 
-### Start Ask terminal Server at Startup (Locally)
+### Start Ask-terminal Server at Startup (Locally)
 
-[services/ask-terminal-server.service](./services/ask-terminal-server.service) offers a template for starting Ask terminal Server as a systemd service.
+[services/ask-terminal-server.service](./services/ask-terminal-server.service) offers a template for starting Ask-terminal Server as a systemd service.
 
 > **Note:** If you [run the server in docker](#run-server-in-docker-and-client-locally) with `make docker-run-server`, you don't need to worry about this section as by default the server container is set to start automatically on startup.
 
@@ -340,7 +340,7 @@ $ ASK_TERMINAL_ENDPOINT=ollama ASK_TERMINAL_MODEL=llama3.2 ask who am i
 
 ## Server Options
 
-Options for the ask terminal server is provided via the `ask_terminal` section in the config file `~/.config/ask-terminal/configs/ask_terminal.yaml`.
+Options for the Ask-terminal server is provided via the `ask_terminal` section in the config file `~/.config/ask-terminal/configs/ask_terminal.yaml`.
 
 You can find all available options and their defaults in the `SettingsChatTerminal` class in [ask_terminal/settings.py](./ask_terminal/settings.py).
 
