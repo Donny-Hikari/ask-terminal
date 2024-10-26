@@ -10,7 +10,7 @@ import math
 import asyncio
 import aiohttp
 
-from chat_terminal.utils import auto_async
+from ask_terminal.utils import auto_async
 
 
 class TextCompletionBase:

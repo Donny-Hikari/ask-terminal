@@ -2,15 +2,15 @@
 
 # environment variables
 
-CHAT_TERMINAL_SERVER_URL=${CHAT_TERMINAL_SERVER_URL:-"http://localhost:16099"}  # url of the chat-terminal-server
-CHAT_TERMINAL_ENDPOINT=${CHAT_TERMINAL_ENDPOINT:-}  # text completion endpoint, default is what specified in the server config file
-CHAT_TERMINAL_MODEL=${CHAT_TERMINAL_MODEL:-}  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
-CHAT_TERMINAL_USE_BLACKLIST=${CHAT_TERMINAL_USE_BLACKLIST:-false}  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
-CHAT_TERMINAL_BLACKLIST_PATTERN=${CHAT_TERMINAL_BLACKLIST_PATTERN:-"\b(rm|sudo)\b"}  # pattern to confirm before execution; patterns are matched using `grep -E`; use with CHAT_TERMINAL_USE_BLACKLIST
-CHAT_TERMINAL_USE_REPLY=${CHAT_TERMINAL_USE_REPLY:-true}  # send the output of command to the server to get a reply
-CHAT_TERMINAL_USE_STREAMING=${CHAT_TERMINAL_USE_STREAMING:-true}  # stream the output
-CHAT_TERMINAL_USE_CLARIFICATION=${CHAT_TERMINAL_USE_CLARIFICATION:-true}  # ask for clarification when refusing a command
-CHAT_TERMINAL_REFUSED_COMMAND_HISTORY=${CHAT_TERMINAL_REFUSED_COMMAND_HISTORY:-true}   # add commands to the history even if it gets refused
+ASK_TERMINAL_SERVER_URL=${ASK_TERMINAL_SERVER_URL:-"http://localhost:16099"}  # url of the ask-terminal-server
+ASK_TERMINAL_ENDPOINT=${ASK_TERMINAL_ENDPOINT:-}  # text completion endpoint, default is what specified in the server config file
+ASK_TERMINAL_MODEL=${ASK_TERMINAL_MODEL:-}  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
+ASK_TERMINAL_USE_BLACKLIST=${ASK_TERMINAL_USE_BLACKLIST:-false}  # use blacklist for command, true to execute command by default except those matching ASK_TERMINAL_BLACKLIST_PATTERN
+ASK_TERMINAL_BLACKLIST_PATTERN=${ASK_TERMINAL_BLACKLIST_PATTERN:-"\b(rm|sudo)\b"}  # pattern to confirm before execution; patterns are matched using `grep -E`; use with ASK_TERMINAL_USE_BLACKLIST
+ASK_TERMINAL_USE_REPLY=${ASK_TERMINAL_USE_REPLY:-true}  # send the output of command to the server to get a reply
+ASK_TERMINAL_USE_STREAMING=${ASK_TERMINAL_USE_STREAMING:-true}  # stream the output
+ASK_TERMINAL_USE_CLARIFICATION=${ASK_TERMINAL_USE_CLARIFICATION:-true}  # ask for clarification when refusing a command
+ASK_TERMINAL_REFUSED_COMMAND_HISTORY=${ASK_TERMINAL_REFUSED_COMMAND_HISTORY:-true}   # add commands to the history even if it gets refused
 
 # internal variables
 
@@ -113,13 +113,13 @@ _curl_server() {
 
   if [[ ${#data} -gt 10240 ]]; then
     # dump data to memory file to avoid overwhelming argument list
-    data_memfile="$(mktemp /dev/shm/chat-terminal-curl-XXXXXX)"
+    data_memfile="$(mktemp /dev/shm/ask-terminal-curl-XXXXXX)"
     echo -nE "$data" >$data_memfile
     data_source="@""$data_memfile"
   fi
 
   curl -s --no-buffer \
-    -X POST "${CHAT_TERMINAL_SERVER_URL}${url}" \
+    -X POST "${ASK_TERMINAL_SERVER_URL}${url}" \
     -H "Content-Type: application/json" \
     -d "$data_source"
   ret_code=$?
@@ -133,11 +133,11 @@ _curl_server() {
 
 _init_conversation() {
   local data="{"
-  if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
-    data+="\"endpoint\": \"$CHAT_TERMINAL_ENDPOINT\""
+  if [[ -n "$ASK_TERMINAL_ENDPOINT" ]]; then
+    data+="\"endpoint\": \"$ASK_TERMINAL_ENDPOINT\""
   fi
-  if [[ -n "$CHAT_TERMINAL_MODEL" ]]; then
-    data+="\"model_name\": \"$CHAT_TERMINAL_MODEL\""
+  if [[ -n "$ASK_TERMINAL_MODEL" ]]; then
+    data+="\"model_name\": \"$ASK_TERMINAL_MODEL\""
   fi
   data+="}"
 
@@ -152,7 +152,7 @@ _query_command() {
 
   data="{ \
     \"message\": $query, \
-    \"stream\": $CHAT_TERMINAL_USE_STREAMING, \
+    \"stream\": $ASK_TERMINAL_USE_STREAMING, \
     \"env\": $(_get_env)
   }"
 
@@ -170,7 +170,7 @@ _query_reply() {
   data="{ \
     \"command_executed\": $executed, \
     \"message\": $observation, \
-    \"stream\": $CHAT_TERMINAL_USE_STREAMING, \
+    \"stream\": $ASK_TERMINAL_USE_STREAMING, \
     \"env\": $(_get_env)
   }"
 
@@ -348,7 +348,7 @@ _chat_once() {
   local ret_code
   local error
 
-  if ! $CHAT_TERMINAL_USE_STREAMING; then
+  if ! $ASK_TERMINAL_USE_STREAMING; then
     result=$(_query_command "$query")
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
@@ -392,8 +392,8 @@ _chat_once() {
 
   exec_command=false
   if [[ ${#_command} -gt 0 ]]; then
-    if [[ "$CHAT_TERMINAL_USE_BLACKLIST" == "true" ]]; then
-      echo -E "$_command" | grep -qE "$CHAT_TERMINAL_BLACKLIST_PATTERN"
+    if [[ "$ASK_TERMINAL_USE_BLACKLIST" == "true" ]]; then
+      echo -E "$_command" | grep -qE "$ASK_TERMINAL_BLACKLIST_PATTERN"
       if [[ $? -ne 0 ]]; then
         exec_command=true
       else
@@ -410,7 +410,7 @@ _chat_once() {
     fi
   fi
 
-  if $exec_command || $CHAT_TERMINAL_REFUSED_COMMAND_HISTORY; then
+  if $exec_command || $ASK_TERMINAL_REFUSED_COMMAND_HISTORY; then
     if [[ -n $BASH_VERSION ]]; then
       history -s "$_command"
     elif [[ -n $ZSH_VERSION ]]; then
@@ -424,8 +424,8 @@ _chat_once() {
     # workaround to avoid pipe and subshell to
     # ensure execution in current shell
     # use /dev/shm to avoid wearing the disk
-    if $CHAT_TERMINAL_USE_REPLY; then
-      memfile=$(mktemp /dev/shm/chat-terminal-XXXXXX)
+    if $ASK_TERMINAL_USE_REPLY; then
+      memfile=$(mktemp /dev/shm/ask-terminal-XXXXXX)
       if [[ -n $BASH_VERSION ]]; then
         { tail -n +1 -f $memfile & } 2>/dev/null
       elif [[ -n $ZSH_VERSION ]]; then
@@ -439,13 +439,13 @@ _chat_once() {
       display_job=$!
     fi
 
-    if $CHAT_TERMINAL_USE_REPLY; then
+    if $ASK_TERMINAL_USE_REPLY; then
       eval "$_command" 1>$memfile 2>&1
     else
       eval "$_command"
     fi
 
-    if $CHAT_TERMINAL_USE_REPLY; then
+    if $ASK_TERMINAL_USE_REPLY; then
       sleep 1  # wait for tail to display all contents
       if [[ -n $BASH_VERSION ]]; then
         { kill $display_job && wait $display_job; } 2>/dev/null
@@ -459,12 +459,12 @@ _chat_once() {
     echo $_MESSAGE_PREFIX "Command finished"
   fi
 
-  if $CHAT_TERMINAL_USE_REPLY; then
-    if $CHAT_TERMINAL_USE_CLARIFICATION && ! $exec_command && [[ ${#_command} -gt 0 ]]; then
+  if $ASK_TERMINAL_USE_REPLY; then
+    if $ASK_TERMINAL_USE_CLARIFICATION && ! $exec_command && [[ ${#_command} -gt 0 ]]; then
       _advance_read -p "Clarification: " observation
     fi
 
-    if ! $CHAT_TERMINAL_USE_STREAMING; then
+    if ! $ASK_TERMINAL_USE_STREAMING; then
       result=$(_query_reply "$exec_command" "$observation")
       _status=$(echo -E "$result" | jq -r ".status")
       if [[ $_status != "success" ]]; then
@@ -501,18 +501,18 @@ _chat_once() {
 }
 
 _check_env_vars() {
-  _ensure_bool CHAT_TERMINAL_USE_BLACKLIST false
-  _ensure_bool CHAT_TERMINAL_USE_REPLY true
-  _ensure_bool CHAT_TERMINAL_USE_STREAMING true
-  _ensure_bool CHAT_TERMINAL_USE_CLARIFICATION true
-  _ensure_bool CHAT_TERMINAL_REFUSED_COMMAND_HISTORY true
+  _ensure_bool ASK_TERMINAL_USE_BLACKLIST false
+  _ensure_bool ASK_TERMINAL_USE_REPLY true
+  _ensure_bool ASK_TERMINAL_USE_STREAMING true
+  _ensure_bool ASK_TERMINAL_USE_CLARIFICATION true
+  _ensure_bool ASK_TERMINAL_REFUSED_COMMAND_HISTORY true
 }
 
-chat-terminal-reset() {
+ask-terminal-reset() {
   _conversation_id=
 }
 
-chat-terminal() {
+ask-terminal() {
   local query="$@"
   local result
   local _status
@@ -522,8 +522,8 @@ chat-terminal() {
   _check_env_vars
 
   if [[ -z "$_conversation_id" ]]; then
-    if [[ -n "$CHAT_TERMINAL_ENDPOINT" ]]; then
-      echo $_MESSAGE_PREFIX "Using endpoint: $CHAT_TERMINAL_ENDPOINT"
+    if [[ -n "$ASK_TERMINAL_ENDPOINT" ]]; then
+      echo $_MESSAGE_PREFIX "Using endpoint: $ASK_TERMINAL_ENDPOINT"
     fi
 
     # generate a UUID as conversation ID

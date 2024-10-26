@@ -28,17 +28,17 @@ classifiers = [
 file = "LICENSE"
 
 [project.urls]
-Homepage = "https://github.com/donny-hikari/chat-terminal"
-Repository = "https://github.com/donny-hikari/chat-terminal"
+Homepage = "https://github.com/donny-hikari/ask-terminal"
+Repository = "https://github.com/donny-hikari/ask-terminal"
 
 [project.scripts]
-chat-terminal-server = "chat_terminal.server:main"
+ask-terminal-server = "ask_terminal.server:main"
 
 [tool.setuptools]
-packages = ["chat_terminal"]
+packages = ["ask_terminal"]
 
 [tool.setuptools.package-data]
-chat_terminal = ["utils/*", "libs/*"]
+ask_terminal = ["utils/*", "libs/*"]
 
 [build-system]
 requires = ["setuptools>=51", "wheel"]

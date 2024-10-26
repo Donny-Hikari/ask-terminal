@@ -3,7 +3,7 @@ FROM ${BASE_IMAGE}
 
 ARG REPO_ARCHIVE=.
 
-WORKDIR /chat-terminal
+WORKDIR /ask-terminal
 
 ADD ${REPO_ARCHIVE} ./
 
@@ -14,4 +14,4 @@ RUN make install-client install-shell-rc
 
 ENV CLIENT_ENV=
 
-CMD ["bash", "-ic", "export ${CLIENT_ENV}; chat-terminal"]
+CMD ["bash", "-ic", "export ${CLIENT_ENV}; ask-terminal"]

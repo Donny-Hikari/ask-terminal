@@ -1,11 +1,11 @@
 [Unit]
-Description=Chat Terminal Server
+Description=Ask terminal Server
 After=network.target
 
 [Service]
 Type=simple
 Restart=on-failure
-ExecStart=/usr/bin/env chat-terminal-server
+ExecStart=/usr/bin/env ask-terminal-server
 # Environment=PATH=$PATH
 
 [Install]

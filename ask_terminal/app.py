@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
-from .chat_terminal import ChatTerminal, ChatQueryEnvModel
+from .ask_terminal import ChatTerminal, ChatQueryEnvModel
 from .settings import Settings
 
 _logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ async def init(conversation_id: str, init_cfg: ChatInitModel=ChatInitModel()):
 
   chat_settings = settings.model_copy(deep=True)
   for prop in init_cfg.model_fields_set:
-    setattr(chat_settings.chat_terminal, prop, getattr(init_cfg, prop))
+    setattr(chat_settings.ask_terminal, prop, getattr(init_cfg, prop))
 
   try:
     chat_pool[conversation_id] = ChatTerminal(chat_settings)

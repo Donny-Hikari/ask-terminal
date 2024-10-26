@@ -25,7 +25,7 @@ def parse_arg(argv=sys.argv[1:]):
   parser.add_argument('--log-level', type=int, default=None)
   parser.add_argument('--log-file', type=str, default=None)
   parser.add_argument('--log-file-level', type=int, default=None)
-  parser.add_argument('--config', '-c', type=str, default="configs/chat_terminal.yaml")
+  parser.add_argument('--config', '-c', type=str, default="configs/ask_terminal.yaml")
   parser.add_argument('--host', type=str, default="127.0.0.1")
   parser.add_argument('--port', type=int, default=16099)
   return parser.parse_args(argv)
