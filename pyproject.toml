@@ -1,6 +1,6 @@
 [project]
 name = "chat-terminal"
-version = "0.1.3"
+version = "0.1.4"
 authors = [
   { name = "Dongning Chen", email = "donny.hikari@gmail.com" },
 ]
@@ -21,7 +21,6 @@ dependencies = [
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
   "Operating System :: OS Independent",
 ]
 

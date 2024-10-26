@@ -44,7 +44,9 @@ $ make docker-run-server DOCKER_SERVER_FLAGS=--net=host\ -d\ -e\ OPENAI_API_KEY=
 
 This will (re)build the image (with name `chat-terminal`) and run the server in the background (with container name `chat-terminal-server`).
 
-Replace `<YOUR_API_KEY>` with your OpenAI API key. You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
+Replace `<YOUR_API_KEY>` with your OpenAI API key.
+
+> **Note:** You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
 
 Then install the client locally with:
 
@@ -87,7 +89,9 @@ Start the server:
 $ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
 ```
 
-Replace `<YOUR_API_KEY>` with your OpenAI API key. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key. You may use a credential file as well, see [OpenAI](#openai).
+Replace `<YOUR_API_KEY>` with your OpenAI API key.
+
+> **Note:** You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
 
 Add chat-terminal to your shell config file by running:
 
@@ -112,7 +116,7 @@ Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
 
 ### Run Client in Docker
 
-You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Chat Terminal - to help you find and execute commands in your environment. Therefor this method mainly for test purpose.
+You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Chat Terminal - to help you find and execute commands in your environment. Therefore this method mainly for test purpose.
 
 ```shell
 $ make docker-run-client CLIENT_ENV=CHAT_TERMINAL_USE_BLACKLIST=true
