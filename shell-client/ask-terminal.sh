@@ -102,6 +102,48 @@ _json_dumps() {
   python3 -c "import sys, json; print(json.dumps(sys.stdin.read()))"
 }
 
+color() {
+  case $1 in
+    black) tput setaf 0 ;;      # Black
+    red) tput setaf 1 ;;        # Red
+    green) tput setaf 2 ;;      # Green
+    yellow) tput setaf 3 ;;     # Yellow
+    blue) tput setaf 4 ;;       # Blue
+    magenta) tput setaf 5 ;;    # Magenta
+    cyan) tput setaf 6 ;;       # Cyan
+    grey|gray) tput setaf 8 ;;       # Dark Gray
+    lightgrey|lightgray) tput setaf 7 ;;       # Light Gray
+    lightred) tput setaf 9 ;;        # Light Red
+    lightgreen) tput setaf 10 ;;     # Light Green
+    lightyellow) tput setaf 11 ;;    # Light Yellow
+    lightblue) tput setaf 12 ;;      # Light Blue
+    lightmagenta) tput setaf 13 ;;   # Light Magenta
+    lightcyan) tput setaf 14 ;;      # Light Cyan
+    white) tput setaf 15 ;;          # White
+    reset) tput sgr0 ;;
+    *) return 1 ;;
+  esac
+}
+
+_print_message() {
+  local message=$1
+  local detail=$2
+  local color_msg=${3:-reset}
+  local color_detail=${4:-$color_msg}
+  local suffix=${5:-$'\n'}
+
+  if [[ -n "$detail" ]]; then
+    message+=' '
+  fi
+
+  printf "$(color $color_msg)%s %s$(color $color_detail)%s$(color reset)${suffix}" "${_MESSAGE_PREFIX}" "$message" "$detail"
+}
+
+_print_section_prompt() {
+  local section_name=$1
+  printf "$(color cyan)\033[4m%s\033[24m> $(color reset)" "$section_prompt"
+}
+
 # APIs
 
 _curl_server() {
@@ -199,7 +241,7 @@ _parse_error_from_result() {
 }
 
 _confirm_command_execution() {
-  echo -n $_MESSAGE_PREFIX "Execute the command? (y/[N]) "
+  _print_message "Execute the command? (y/[N])" "" yellow yellow " "
   if [[ -n "$BASH_VERSION" ]]; then
     read -n 1 choice
   elif [[ -n "$ZSH_VERSION" ]]; then
@@ -266,13 +308,13 @@ _process_response_stream() {
 
       if [[ -z "$content" ]]; then
         if $finished; then
-          echo $_MESSAGE_PREFIX "No command provided" >&3
+          _print_message "No ${section_name} provided" "" grey >&3
           break
         fi
         continue
       fi
 
-      echo -n "${section_prompt}> " >&3
+      _print_section_prompt "${section_prompt}" >&3
       hint_printed=true
     fi
 
@@ -353,7 +395,7 @@ _chat_once() {
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
       error=$(_parse_error_from_result "$result")
-      echo $_MESSAGE_PREFIX "Failed to generate command: $error"
+      _print_message "Failed to generate command:" "$error" red
       return 1
     fi
 
@@ -379,7 +421,7 @@ _chat_once() {
     fi
 
     if [[ -n "$error" ]]; then
-      echo $_MESSAGE_PREFIX "Failed to query command: ${error}"
+      _print_message "Failed to query command:" "${error}" red
       return 1
     fi
 
@@ -456,7 +498,7 @@ _chat_once() {
       rm $memfile
     fi
 
-    echo $_MESSAGE_PREFIX "Command finished"
+    _print_message "Command finished" "" green
   fi
 
   if $ASK_TERMINAL_USE_REPLY; then
@@ -469,7 +511,7 @@ _chat_once() {
       _status=$(echo -E "$result" | jq -r ".status")
       if [[ $_status != "success" ]]; then
         error=$(_parse_error_from_result "$result")
-        echo $_MESSAGE_PREFIX "Failed to generate reply: $result"
+        _print_message "Failed to generate reply:" "$result" red
         return 1
       fi
 
@@ -491,7 +533,7 @@ _chat_once() {
       fi
 
       if [[ -n "$error" ]]; then
-        echo $_MESSAGE_PREFIX "Failed to query reply: ${error}"
+        _print_message "Failed to query reply:" "${error}" red
         return 1
       fi
 
@@ -523,7 +565,7 @@ ask-terminal() {
 
   if [[ -z "$_conversation_id" ]]; then
     if [[ -n "$ASK_TERMINAL_ENDPOINT" ]]; then
-      echo $_MESSAGE_PREFIX "Using endpoint: $ASK_TERMINAL_ENDPOINT"
+      _print_message "Using endpoint:" "$ASK_TERMINAL_ENDPOINT" "" lightgrey
     fi
 
     # generate a UUID as conversation ID
@@ -532,11 +574,11 @@ ask-terminal() {
     _status=$(echo -E "$result" | jq -r ".status")
     if [[ $_status != "success" ]]; then
       error=$(_parse_error_from_result "$result")
-      echo $_MESSAGE_PREFIX "Failed to initialize converstaion: ${error}"
+      _print_message "Failed to initialize converstaion:" "${error}" red
       _conversation_id=
       return 1
     fi
-    echo $_MESSAGE_PREFIX "Initialized conversation: $_conversation_id"
+    _print_message "Initialized conversation:" "$_conversation_id" "" lightgrey
   fi
 
   if [[ -n "$query" ]]; then
