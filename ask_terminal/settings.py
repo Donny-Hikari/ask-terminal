@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-class SettingsChatTerminal(BaseModel):
+class SettingsAskTerminal(BaseModel):
   endpoint: str = Field("local-llama", help="default text completion endpoint")
   model_name: Optional[str] = Field(None, help="default model name, if the endpoint supports setting model; this will overwrite the endpoint's `model` field in `text_completion_endpoints`")
   prompt: str = Field("prompts/ask-terminal.mext", help="prompt template")
@@ -18,5 +18,5 @@ class SettingsChatTerminal(BaseModel):
       protected_namespaces = ()
 
 class Settings(BaseModel):
-  ask_terminal: SettingsChatTerminal = SettingsChatTerminal()
+  ask_terminal: SettingsAskTerminal = SettingsAskTerminal()
   text_completion_endpoints: Dict[str, Dict] = {}

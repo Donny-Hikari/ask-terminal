@@ -31,7 +31,7 @@ class ChatQueryEnvModel(BaseModel):
   os: str = "Unix"
   shell: Optional[Literal["bash", "zsh"]] = None
 
-class ChatTerminal:
+class AskTerminal:
   TRUNCATION_INDICATOR = "<...TRUNCATED...>"
   TRUNCATION_FRONT_RATIO = 0.3
   TRUNCATION_COARSE_GAP = 16
@@ -173,7 +173,7 @@ class ChatTerminal:
           gen_role=gen_role,
           stop=self._get_stop_from_role(gen_role),
           additional_params=additional_params,
-          cb=ChatTerminal._add_section_info_to_query_callback(cb, "thinking"),
+          cb=AskTerminal._add_section_info_to_query_callback(cb, "thinking"),
         )
         self._history[-1].thinking = thinking
 
@@ -182,7 +182,7 @@ class ChatTerminal:
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
         additional_params=additional_params,
-        cb=ChatTerminal._add_section_info_to_query_callback(cb, "command"),
+        cb=AskTerminal._add_section_info_to_query_callback(cb, "command"),
       )
       command = command.strip('`')
       self._history[-1].command = command
@@ -197,9 +197,9 @@ class ChatTerminal:
     self._history[-1].observation = await self._tc.truncate(
       observation,
       self._configs.max_observation_tokens,
-      truncation_indicator=ChatTerminal.TRUNCATION_INDICATOR,
-      front_ratio=ChatTerminal.TRUNCATION_FRONT_RATIO,
-      coarse_gap=ChatTerminal.TRUNCATION_COARSE_GAP,  # approximately 1/3 speed up if coarse gap is 16 and max observation length is 4096
+      truncation_indicator=AskTerminal.TRUNCATION_INDICATOR,
+      front_ratio=AskTerminal.TRUNCATION_FRONT_RATIO,
+      coarse_gap=AskTerminal.TRUNCATION_COARSE_GAP,  # approximately 1/3 speed up if coarse gap is 16 and max observation length is 4096
     )
     self._history[-1].observation_received = True
 
@@ -222,7 +222,7 @@ class ChatTerminal:
         gen_role=gen_role,
         stop=self._get_stop_from_role(gen_role),
         additional_params=additional_params,
-        cb=ChatTerminal._add_section_info_to_query_callback(cb, "reply"),
+        cb=AskTerminal._add_section_info_to_query_callback(cb, "reply"),
       )
       self._history[-1].reply = reply
 

@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
-from .ask_terminal import ChatTerminal, ChatQueryEnvModel
+from .ask_terminal import AskTerminal, ChatQueryEnvModel
 from .settings import Settings
 
 _logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class ChatQueryReplyModel(ChatQueryModel):
 app = FastAPI()
 
 settings = Settings()
-chat_pool: Dict[str, ChatTerminal] = {}
+chat_pool: Dict[str, AskTerminal] = {}
 
 def set_settings(_settings: Settings):
   global settings
@@ -79,7 +79,7 @@ async def init(conversation_id: str, init_cfg: ChatInitModel=ChatInitModel()):
     setattr(chat_settings.ask_terminal, prop, getattr(init_cfg, prop))
 
   try:
-    chat_pool[conversation_id] = ChatTerminal(chat_settings)
+    chat_pool[conversation_id] = AskTerminal(chat_settings)
   except ValueError as e:
     return {
       "status": "error",

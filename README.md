@@ -342,7 +342,7 @@ $ ASK_TERMINAL_ENDPOINT=ollama ASK_TERMINAL_MODEL=llama3.2 ask who am i
 
 Options for the Ask-terminal server is provided via the `ask_terminal` section in the config file `~/.config/ask-terminal/configs/ask_terminal.yaml`.
 
-You can find all available options and their defaults in the `SettingsChatTerminal` class in [ask_terminal/settings.py](./ask_terminal/settings.py).
+You can find all available options and their defaults in the `SettingsAskTerminal` class in [ask_terminal/settings.py](./ask_terminal/settings.py).
 
 ```yaml
 ask_terminal:
