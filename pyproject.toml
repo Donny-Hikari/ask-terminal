@@ -1,5 +1,5 @@
 [project]
-name = "chat-terminal"
+name = "ask-terminal"
 version = "0.1.4"
 authors = [
   { name = "Dongning Chen", email = "donny.hikari@gmail.com" },
