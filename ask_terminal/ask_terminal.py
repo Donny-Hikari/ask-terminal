@@ -40,7 +40,7 @@ class ChatTerminal:
     self._logger = _logger
     self._logger.debug(str(settings))
 
-    self._configs = settings.chat_terminal
+    self._configs = settings.ask_terminal
     self._user = self._configs.user
     self._agent = self._configs.agent
 

@@ -1,6 +1,6 @@
 [project]
-name = "chat-terminal"
-version = "0.1.3"
+name = "ask-terminal"
+version = "0.1.4"
 authors = [
   { name = "Dongning Chen", email = "donny.hikari@gmail.com" },
 ]
@@ -21,7 +21,6 @@ dependencies = [
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
   "Operating System :: OS Independent",
 ]
 
@@ -29,17 +28,17 @@ classifiers = [
 file = "LICENSE"
 
 [project.urls]
-Homepage = "https://github.com/donny-hikari/chat-terminal"
-Repository = "https://github.com/donny-hikari/chat-terminal"
+Homepage = "https://github.com/donny-hikari/ask-terminal"
+Repository = "https://github.com/donny-hikari/ask-terminal"
 
 [project.scripts]
-chat-terminal-server = "chat_terminal.server:main"
+ask-terminal-server = "ask_terminal.server:main"
 
 [tool.setuptools]
-packages = ["chat_terminal"]
+packages = ["ask_terminal"]
 
 [tool.setuptools.package-data]
-chat_terminal = ["utils/*", "libs/*"]
+ask_terminal = ["utils/*", "libs/*"]
 
 [build-system]
 requires = ["setuptools>=51", "wheel"]

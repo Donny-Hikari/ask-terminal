@@ -6,10 +6,10 @@ DOCKER_PHRASE ?= "@>"
 # variables
 COPY_OVERWRITE ?= false
 COPY_FLAG ?= -vr
-SHELL_CLIENT_DEST ?= $(HOME)/.chat-terminal/chat-terminal.sh
+SHELL_CLIENT_DEST ?= $(HOME)/.ask-terminal/ask-terminal.sh
 SHELL_RCFILE ?= $(HOME)/.bashrc
-CONFIGS_DIR ?= $(HOME)/.config/chat-terminal
-CONFIG_FILE_SOURCE ?= configs/chat_terminal.yaml
+CONFIGS_DIR ?= $(HOME)/.config/ask-terminal
+CONFIG_FILE_SOURCE ?= configs/ask_terminal.yaml
 
 
 ifeq ($(COPY_OVERWRITE), false)
@@ -36,17 +36,17 @@ install:
 
 install-configs: pre-install-configs make-configs-dir copy-prompts copy-configs copy-credentials
 
-install-scripts: shell-client/chat-terminal.sh
+install-scripts: shell-client/ask-terminal.sh
 	@echo $(PHRASE) "Installing scripts..."
 	mkdir -p "$$(dirname $(SHELL_CLIENT_DEST))"
-	cp $(COPY_FLAG) shell-client/chat-terminal.sh $(SHELL_CLIENT_DEST)
+	cp $(COPY_FLAG) shell-client/ask-terminal.sh $(SHELL_CLIENT_DEST)
 
 install-shell-rc:
 	@echo $(PHRASE) "Appending to shell runtime configuration..."
 	echo >> $(SHELL_RCFILE)
-	echo "# added by chat-terminal" >> $(SHELL_RCFILE)
+	echo "# added by ask-terminal" >> $(SHELL_RCFILE)
 	echo "source \"$(SHELL_CLIENT_DEST)\"" >> $(SHELL_RCFILE)
-	echo "alias ask=chat-terminal" >> $(SHELL_RCFILE)
+	echo "alias ask=ask-terminal" >> $(SHELL_RCFILE)
 
 pre-install-configs:
 	@echo $(PHRASE) "Installing config files..."
@@ -65,7 +65,7 @@ copy-credentials: make-configs-dir
 	[ -e credentials ] && cp $(COPY_FLAG) credentials $(CONFIGS_DIR) || true
 
 uninstall:
-	pip uninstall -y chat-terminal
+	pip uninstall -y ask-terminal
 
 delete-all-configs:
 	rm -rf "$(CONFIGS_DIR)"
@@ -80,7 +80,7 @@ delete-all-scripts:
 		|| true
 
 clean:
-	rm -rdf build dist chat_terminal.egg-info
+	rm -rdf build dist ask_terminal.egg-info
 
 purge: uninstall delete-all-configs delete-all-scripts
 
@@ -89,8 +89,8 @@ purge: uninstall delete-all-configs delete-all-scripts
 .PHONY: install-service
 
 install-service:
-	cp $(COPY_FLAG) services/chat-terminal-server.service $(HOME)/.config/systemd/user/
-	sed -i 's|# Environment=PATH=$$PATH|Environment=PATH=$(PATH)|' $(HOME)/.config/systemd/user/chat-terminal-server.service
+	cp $(COPY_FLAG) services/ask-terminal-server.service $(HOME)/.config/systemd/user/
+	sed -i 's|# Environment=PATH=$$PATH|Environment=PATH=$(PATH)|' $(HOME)/.config/systemd/user/ask-terminal-server.service
 
 .PHONY: build
 
@@ -110,10 +110,10 @@ CLIENT_ENV ?=
 
 DOCKER_SERVER_FILE ?= docker/server.dockerfile
 DOCKER_CLIENT_FILE ?= docker/client.dockerfile
-DOCKER_SERVER_IMAGE_NAME ?= chat-terminal-server
-DOCKER_CLIENT_IMAGE_NAME ?= chat-terminal-client
-DOCKER_SERVER_CONTAINER_NAME ?= chat-terminal-server
-DOCKER_CLIENT_CONTAINER_NAME ?= chat-terminal-client
+DOCKER_SERVER_IMAGE_NAME ?= ask-terminal-server
+DOCKER_CLIENT_IMAGE_NAME ?= ask-terminal-client
+DOCKER_SERVER_CONTAINER_NAME ?= ask-terminal-server
+DOCKER_CLIENT_CONTAINER_NAME ?= ask-terminal-client
 
 .PHONY: docker-build-image docker-setup docker-run-server docker-rm-server docker-run-client
 
@@ -126,7 +126,7 @@ docker-build-image:
 ifneq ($(DOCKER_IMAGE_SOURCE_BRANCH),)
 # support building from a git branch
 	mkdir -p ./tmp
-	tmp_git_archive=$$(mktemp ./tmp/chat-terminal-repo-archive-XXXXXX.tar.gz) &&	\
+	tmp_git_archive=$$(mktemp ./tmp/ask-terminal-repo-archive-XXXXXX.tar.gz) &&	\
 		git archive --format=tar.gz -o $$tmp_git_archive master && \
 		docker build -t $(DOCKER_IMAGE_NAME) --build-arg REPO_ARCHIVE=$$tmp_git_archive $(DOCKER_BUILD_FLAGS) -f $(DOCKER_FILE) . && \
 		rm $$tmp_git_archive

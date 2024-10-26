@@ -1,4 +1,4 @@
-# Chat Terminal
+# Ask-terminal
 
 Chat with your terminal and get things done using natural language with the help of LLM (Large Language Model).
 
@@ -42,9 +42,11 @@ Start the server in docker with command:
 $ make docker-run-server DOCKER_SERVER_FLAGS=--net=host\ -d\ -e\ OPENAI_API_KEY=<YOUR_API_KEY>
 ```
 
-This will (re)build the image (with name `chat-terminal`) and run the server in the background (with container name `chat-terminal-server`).
+This will (re)build the image (with name `ask-terminal`) and run the server in the background (with container name `ask-terminal-server`).
 
-Replace `<YOUR_API_KEY>` with your OpenAI API key. You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
+Replace `<YOUR_API_KEY>` with your OpenAI API key.
+
+> **Note:** You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
 
 Then install the client locally with:
 
@@ -52,7 +54,7 @@ Then install the client locally with:
 $ make install-client
 ```
 
-Add chat-terminal to your shell config file by running:
+Add ask-terminal to your shell config file by running:
 
 ```shel
 $ make install-shell-rc
@@ -61,15 +63,15 @@ $ make install-shell-rc
 You may edit the shell config file yourself (`~/.bashrc` or `~/.zshrc`). Add these lines:
 
 ```shell
-source $HOME/.chat-terminal/chat-terminal.sh
-alias ask=chat-terminal
+source $HOME/.ask-terminal/ask-terminal.sh
+alias ask=ask-terminal
 ```
 
-Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
+Start a new terminal, and run `ask-terminal` or `ask`. Enjoy!
 
 > **Note:** You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
-> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
+> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `ASK_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
 >
 > It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
 
@@ -84,12 +86,14 @@ $ make setup
 Start the server:
 
 ```shell
-$ OPENAI_API_KEY=<YOUR_API_KEY> chat-terminal-server
+$ OPENAI_API_KEY=<YOUR_API_KEY> ask-terminal-server
 ```
 
-Replace `<YOUR_API_KEY>` with your OpenAI API key. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key. You may use a credential file as well, see [OpenAI](#openai).
+Replace `<YOUR_API_KEY>` with your OpenAI API key.
 
-Add chat-terminal to your shell config file by running:
+> **Note:** You may use a credential file as well. See [OpenAI](#openai) in the [Text Completion Endpoint](#text-completion-endpoint) section for more information on how to obtain an OpenAI API key and how to use a credential file.
+
+Add ask-terminal to your shell config file by running:
 
 ```shel
 $ make install-shell-rc
@@ -98,34 +102,34 @@ $ make install-shell-rc
 You may edit the shell config file yourself (`~/.bashrc` or `~/.zshrc`). Add these lines:
 
 ```shell
-source $HOME/.chat-terminal/chat-terminal.sh
-alias ask=chat-terminal
+source $HOME/.ask-terminal/ask-terminal.sh
+alias ask=ask-terminal
 ```
 
-Start a new terminal, and run `chat-terminal` or `ask`. Enjoy!
+Start a new terminal, and run `ask-terminal` or `ask`. Enjoy!
 
 > **Note:** You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
-> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `CHAT_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
+> **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `ASK_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
 >
 > It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
 
 ### Run Client in Docker
 
-You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Chat Terminal - to help you find and execute commands in your environment. Therefor this method mainly for test purpose.
+You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Ask-terminal - to help you find and execute commands in your environment. Therefore this method mainly for test purpose.
 
 ```shell
-$ make docker-run-client CLIENT_ENV=CHAT_TERMINAL_USE_BLACKLIST=true
+$ make docker-run-client CLIENT_ENV=ASK_TERMINAL_USE_BLACKLIST=true
 ```
 
-`CHAT_TERMINAL_USE_BLACKLIST=true` allows the client to run commands that are not in the blacklist without confirmation. Use `CHAT_TERMINAL_BLACKLIST_PATTERN` to set the blacklist pattern (grep pattern matching).
+`ASK_TERMINAL_USE_BLACKLIST=true` allows the client to run commands that are not in the blacklist without confirmation. Use `ASK_TERMINAL_BLACKLIST_PATTERN` to set the blacklist pattern (grep pattern matching).
 
 ## Usage
 
-Chat with your terminal with the command `chat-terminal`:
+Chat with your terminal with the command `ask-terminal`:
 
 ```console
-$ chat-terminal go home
+$ ask-terminal go home
 % Initialized conversation: 931a4474-384c-4fdf-8c3b-934c95ee48ed
 Thought> The user wants to change the current directory. I should use the `cd` command.
 Command> cd ~/
@@ -148,7 +152,7 @@ Command> find ~/.config -name "keybindings.json"
 Reply> The keybindings file is "/home/username/.config/Code/User/keybindings.json".
 ```
 
-Chat terminal can do a lot for you and if it fails, you can ask it to fix. Go creative.
+Ask-terminal can do a lot for you and if it fails, you can ask it to fix. Go creative.
 
 Some examples:
 
@@ -160,10 +164,10 @@ Some examples:
 
 ### Interactive Mode
 
-Run the command `chat-terminal` or `ask` without arguments to enter interactive mode:
+Run the command `ask-terminal` or `ask` without arguments to enter interactive mode:
 
 ```console
-$ chat-terminal
+$ ask-terminal
 % Initialized conversation: d7370783-ce14-4f13-9901-dfffbb5990f3
 > which program is using port 16099
 Thought> The user might want to find the process that occupies this port. We can use the `netstat` command.
@@ -177,15 +181,15 @@ Let me try again.
 Thought> No problem, let's find the process that occupies port 16099 using ss command instead of netstat.
 Command> ss -tlnp | grep 16099
 % Execute the command? (y/[N]) y
-LISTEN 0      2048       127.0.0.1:16099      0.0.0.0:*    users:(("chat-terminal-s",pid=207732,fd=6))
+LISTEN 0      2048       127.0.0.1:16099      0.0.0.0:*    users:(("ask-terminal-s",pid=207732,fd=6))
 % Command finished
-Reply> The program using port 16099 is "chat-terminal-s".
+Reply> The program using port 16099 is "ask-terminal-s".
 >
 ```
 
-### Start Chat Terminal Server at Startup (Locally)
+### Start Ask-terminal Server at Startup (Locally)
 
-[services/chat-terminal-server.service](./services/chat-terminal-server.service) offers a template for starting Chat Terminal Server as a systemd service.
+[services/ask-terminal-server.service](./services/ask-terminal-server.service) offers a template for starting Ask-terminal Server as a systemd service.
 
 > **Note:** If you [run the server in docker](#run-server-in-docker-and-client-locally) with `make docker-run-server`, you don't need to worry about this section as by default the server container is set to start automatically on startup.
 
@@ -195,13 +199,13 @@ To install the service, first run:
 $ make install-service
 ```
 
-Then edit `~/.config/systemd/user/chat-terminal-server.service` as you need.
+Then edit `~/.config/systemd/user/ask-terminal-server.service` as you need.
 
 Finally, enable (and start) the service with:
 
 ```shell
 $ systemctl --user daemon-reload
-$ systemctl --user enable --now chat-terminal-server.service
+$ systemctl --user enable --now ask-terminal-server.service
 ```
 
 ### Configuration
@@ -213,12 +217,12 @@ Refers to [Shell Client Options](#shell-client-options) and [Server Options](#se
 You can reset the chat session with the following command:
 
 ```shell
-$ chat-terminal-reset
+$ ask-terminal-reset
 ```
 
-The next time you start `chat-terminal`, it will create a new conversation session.
+The next time you start `ask-terminal`, it will create a new conversation session.
 
-> **Note:** Some client environment variables required a `chat-terminal-reset` to be applied, such as `CHAT_TERMINAL_ENDPOINT` and `CHAT_TERMINAL_MODEL`.
+> **Note:** Some client environment variables required a `ask-terminal-reset` to be applied, such as `ASK_TERMINAL_ENDPOINT` and `ASK_TERMINAL_MODEL`.
 
 ## Text Completion Endpoints
 
@@ -231,15 +235,15 @@ The following text completion endpoints are supported:
 
 There are two ways to configure the endpoints:
 
-1. Change th endpoint in the server configuration file `~/.config/chat-terminal/configs/chat_terminal.yaml`. This will be the default endpoint for all chat sessions.
-2. Set the environment variable `CHAT_TERMINAL_ENDPOINT` for the client. This will overwrite the default one specified in the server configuration file. You can change the endpoint flexibly for different chat sessions.
+1. Change th endpoint in the server configuration file `~/.config/ask-terminal/configs/ask_terminal.yaml`. This will be the default endpoint for all chat sessions.
+2. Set the environment variable `ASK_TERMINAL_ENDPOINT` for the client. This will overwrite the default one specified in the server configuration file. You can change the endpoint flexibly for different chat sessions.
 
 ### Ollama
 
-Change the endpoint to `ollama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use ollama for text completion.
+Change the endpoint to `ollama` in file `~/.config/ask-terminal/configs/ask_terminal.yaml` to use ollama for text completion.
 
 ```yaml
-chat_terminal:
+ask_terminal:
   endpoint: ollama
 ```
 
@@ -261,10 +265,10 @@ $ ollama pull llama3.1
 
 ### Llama-cpp
 
-Change the endpoint to `local-llama` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use [llama-cpp](https://github.com/ggerganov/llama.cpp) for text completion.
+Change the endpoint to `local-llama` in file `~/.config/ask-terminal/configs/ask_terminal.yaml` to use [llama-cpp](https://github.com/ggerganov/llama.cpp) for text completion.
 
 ```yaml
-chat_terminal:
+ask_terminal:
   endpoint: local-llama
 ```
 
@@ -279,14 +283,14 @@ text_completion_endpoints:
 
 ### OpenAI
 
-Change the endpoint to `openai` in file `~/.config/chat-terminal/configs/chat_terminal.yaml` to use openai for text completion.
+Change the endpoint to `openai` in file `~/.config/ask-terminal/configs/ask_terminal.yaml` to use openai for text completion.
 
 ```yaml
-chat_terminal:
+ask_terminal:
   endpoint: openai
 ```
 
-You may set your API key via environment variable `OPENAI_API_KEY`, or use a credential file at `~/.config/chat-terminal/credentials/openai.yaml`.
+You may set your API key via environment variable `OPENAI_API_KEY`, or use a credential file at `~/.config/ask-terminal/credentials/openai.yaml`.
 
 To use credential file, first create it with the following content:
 
@@ -294,13 +298,13 @@ To use credential file, first create it with the following content:
 api_key: <YOUR_API_KEY>
 ```
 
-Then add the credential file to `~/.config/chat-terminal/configs/chat_terminal.yaml`:
+Then add the credential file to `~/.config/ask-terminal/configs/ask_terminal.yaml`:
 
 ```yaml
 text_completion_endpoints:
   openai:
     model: gpt-3.5-turbo
-    credential_file: credentials/openai.yaml  # it will search ~/.config/chat-terminal; you can specify the full path as well
+    credential_file: credentials/openai.yaml  # it will search ~/.config/ask-terminal; you can specify the full path as well
     # ... other configuration options
 ```
 
@@ -308,7 +312,7 @@ For how to get an API key, see [Quickstart tutorial - OpenAI API](https://platfo
 
 ### Anthropic
 
-Setup of Anthropic is similar to [OpenAI](#openai). The name of the endpoint is `anthropic`. The API key is stored in environment variable `ANTHROPIC_API_KEY`, or in credential file `~/.config/chat-terminal/credentials/anthropic.yaml`.
+Setup of Anthropic is similar to [OpenAI](#openai). The name of the endpoint is `anthropic`. The API key is stored in environment variable `ANTHROPIC_API_KEY`, or in credential file `~/.config/ask-terminal/credentials/anthropic.yaml`.
 
 For how to get an API key, see [Build with Claude \\ Anthropic](https://www.anthropic.com/api).
 
@@ -317,34 +321,34 @@ For how to get an API key, see [Build with Claude \\ Anthropic](https://www.anth
 The following environment variables can be used to configure the shell client:
 
 ```shell
-CHAT_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the chat-terminal-server
-CHAT_TERMINAL_ENDPOINT=  # text completion endpoint, default is what specified in the server config file
-CHAT_TERMINAL_MODEL=  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
-CHAT_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching CHAT_TERMINAL_BLACKLIST_PATTERN
-CHAT_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution; patterns are matched using `grep -E`; use with CHAT_TERMINAL_USE_BLACKLIST
-CHAT_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
-CHAT_TERMINAL_USE_STREAMING=true  # stream the output
-CHAT_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
-CHAT_TERMINAL_REFUSED_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
+ASK_TERMINAL_SERVER_URL="http://localhost:16099"  # url of the ask-terminal-server
+ASK_TERMINAL_ENDPOINT=  # text completion endpoint, default is what specified in the server config file
+ASK_TERMINAL_MODEL=  # text completion model if the endpoint supports setting the model, default is what specified in the server config file
+ASK_TERMINAL_USE_BLACKLIST=false  # use blacklist for command, true to execute command by default except those matching ASK_TERMINAL_BLACKLIST_PATTERN
+ASK_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before execution; patterns are matched using `grep -E`; use with ASK_TERMINAL_USE_BLACKLIST
+ASK_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
+ASK_TERMINAL_USE_STREAMING=true  # stream the output
+ASK_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
+ASK_TERMINAL_REFUSED_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
 ```
 
-You may use `export CHAT_TERMINAL_*=...` before hand or prepend the environment variables `CHAT_TERMINAL_*=...` to the client `chat-terminal` (or `ask`) command to use them.
+You may use `export ASK_TERMINAL_*=...` before hand or prepend the environment variables `ASK_TERMINAL_*=...` to the client `ask-terminal` (or `ask`) command to use them.
 
 ```shell
-$ CHAT_TERMINAL_ENDPOINT=ollama CHAT_TERMINAL_MODEL=llama3.2 ask who am i
+$ ASK_TERMINAL_ENDPOINT=ollama ASK_TERMINAL_MODEL=llama3.2 ask who am i
 ```
 
 ## Server Options
 
-Options for the chat terminal server is provided via the `chat_terminal` section in the config file `~/.config/chat-terminal/configs/chat_terminal.yaml`.
+Options for the Ask-terminal server is provided via the `ask_terminal` section in the config file `~/.config/ask-terminal/configs/ask_terminal.yaml`.
 
-You can find all available options and their defaults in the `SettingsChatTerminal` class in [chat_terminal/settings.py](./chat_terminal/settings.py).
+You can find all available options and their defaults in the `SettingsChatTerminal` class in [ask_terminal/settings.py](./ask_terminal/settings.py).
 
 ```yaml
-chat_terminal:
+ask_terminal:
   endpoint: "local-llama"  # default text completion endpoint
   model_name: null  # default model name, if the endpoint supports setting model; this will overwrite the endpoint's `model` field in `text_completion_endpoints`
-  prompt: "prompts/chat-terminal.mext"  # prompt template
+  prompt: "prompts/ask-terminal.mext"  # prompt template
   use_thinking: True  # think before composing the command or not (chain of thought)
   max_observation_tokens: 1024  # truncate the output of command to this length before asking for a reply
   max_reply_tokens: 2048  # the maximum number of tokens to generate for a reply
