@@ -160,7 +160,7 @@ Some examples:
 2. Check system status.
 3. Convert images or videos (ffmpeg is too hard for me):
 
-[![demo2.mp4](./demo/demo2.jpg)](https://github.com/user-attachments/assets/dc7a70d7-9bc4-4ddc-bd34-ad924bb4b2d7)
+[![demo2.mp4](./demo/demo2.jpg)](https://github.com/user-attachments/assets/a8f922b4-2481-426f-a954-efbb4e94254b)
 
 ### Interactive Mode
 
