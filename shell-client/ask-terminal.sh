@@ -17,6 +17,11 @@ ASK_TERMINAL_REFUSED_COMMAND_HISTORY=${ASK_TERMINAL_REFUSED_COMMAND_HISTORY:-tru
 _MESSAGE_PREFIX="%"
 _conversation_id=
 
+# constant
+
+SIGNAL_OFFSET=128
+SIGINT_EXITCODE=$(( $SIGNAL_OFFSET + $(kill -l SIGINT) ))
+
 
 # handy functions
 
@@ -24,13 +29,86 @@ _print_response() {
   echo -E "$1> $2"
 }
 
+_version_gt() {
+  local lver=$1
+  local rver=$2
+  printf '%s\n' "$lver" "$rver" | sort -Vr | head -n1 | grep -vq "$rver"
+}
+
+_reset_vared() {
+  if [[ -o zle ]]; then
+    if [[ -n "$BUFFER" ]]; then
+      zle -I
+      zle kill-buffer
+    else
+      # handle the INT in _advance_read vared alway
+      # since the following does not work as intended:
+      # - zle accept-line
+      # - zle send-break
+      trap - SIGINT
+      kill -INT $$
+    fi
+  fi
+}
+
 _advance_read() {
-  if [[ -n $BASH_VERSION ]]; then
-    read -e "$@"
+  if [[ -n $BASH_VERSION ]] && ( _version_gt "$BASH_VERSION" "3.2" ); then
+    local varname=$1; shift
+    declare -n varref=$varname
+    local ret_code=
+
+    trap "echo" SIGINT
+
+    varref=$( read -e "$@" "$varname"; ret_code=$?; echo -n "${!varname}"; return $ret_code )
+    ret_code=$?
+
+    trap - SIGINT
+
+    return $ret_code
   elif [[ -n $ZSH_VERSION ]]; then
-    vared -h -e "$@"
+    local varname=$1; shift
+    local sigint_received=false
+    local ret_code=
+
+    trap _reset_vared SIGINT
+
+    { vared -h -e "$@" "$varname" } always {  # have to write this way to appease bash syntax
+      # magic to prevent interrupt from exiting the caller
+      # https://www.zsh.org/mla/workers/2020.primenet/msg00856.html
+      if [[ $TRY_BLOCK_INTERRUPT -eq 1 ]]; then
+        # is SIGINT
+        TRY_BLOCK_INTERRUPT=0
+        sigint_received=true
+      fi
+    }
+    ret_code=$?
+
+    trap - SIGINT
+
+    if $sigint_received; then
+      return $SIGINT_EXITCODE
+    else
+      return $ret_code
+    fi
   else
-    read "$@"
+    local varname=$1; shift
+    local result=
+    local ret_code=
+    local sigint_received=false
+
+    trap "sigint_received=true; echo" SIGINT
+
+    result=$( read -e "$@" "$varname"; ret_code=$?; echo -n "${!varname}"; return $ret_code )
+    ret_code=$?
+    eval "$varname="'"$result"'
+
+    trap - SIGINT
+
+    if $sigint_received; then
+      return $SIGINT_EXITCODE
+    else
+      return $ret_code
+    fi
   fi
 }
 
@@ -67,7 +145,7 @@ _ensure_bool() {
   local default=$2
   local original_val=
 
-  if [[ -n $BASH_VERSION ]] && ( printf '%s\n' "$version" "3.2" | sort -Vr | head -n1 | grep -vq "3.2" ); then
+  if [[ -n $BASH_VERSION ]] && ( _version_gt "$BASH_VERSION" "3.2" ); then
     declare -n varref=$1
     original_val=$varref
     if [[ "$original_val" == true || "$original_val" == false ]]; then
@@ -241,15 +319,26 @@ _parse_error_from_result() {
 }
 
 _confirm_command_execution() {
+  local choice=
+
   _print_message "Execute the command? (y/[N])" "" yellow yellow " "
+
   if [[ -n "$BASH_VERSION" ]]; then
-    read -n 1 choice
+    trap "echo" SIGINT
+    choice=$(read -n 1 choice && echo $choice)
+    trap - SIGINT
   elif [[ -n "$ZSH_VERSION" ]]; then
-    read -k 1 choice
+    trap "echo" SIGINT
+    choice=$(read -k 1 choice && echo $choice)
+    trap - SIGINT
   else
-    read choice
+    trap "echo" SIGINT
+    choice=$(read choice && echo $choice)
+    trap - SIGINT
   fi
-  echo
+  if [[ -n "$choice" || "$choice" == $'\n' ]]; then
+    echo
+  fi
 
   if [[ "$choice" == 'y' || "$choice" == 'Y' ]]; then
     return 0
@@ -346,12 +435,20 @@ _process_response_stream() {
   echo -E "$var_name=$res" >&1
 }
 
+_bash3_2_sigint_passthrough() {
+  local parent_pid=$1
+  if [[ -n $BASH_VERSION ]] && ( ! _version_gt "$BASH_VERSION" "3.2" ); then
+    # kill the outer subshell; for bash 3.2 or earlier
+    trap "trap - SIGINT; kill -INT $parent_pid" SIGINT;
+  fi
+}
+
 _query_and_process_command() {
   local ret_code=0
 
-  _query_command "$@" | \
+  ( _bash3_2_sigint_passthrough $$; _query_command "$@" ) | \
     _process_response_stream "Thought" 'thinking' thinking | \
-    _process_response_stream "Command" 'command' _command
+    ( _process_response_stream "Command" 'command' _command; trap - SIGINT )
 
   if [[ -n $BASH_VERSION ]]; then
     ret_code=${PIPESTATUS[0]}
@@ -365,8 +462,9 @@ _query_and_process_command() {
 _query_and_process_reply() {
   local ret_code=0
 
-  _query_reply "$@" | \
-    _process_response_stream "Reply" 'reply' reply
+  # kill the outer subshell; for bash 3.2 or earlier
+  ( _bash3_2_sigint_passthrough $$; _query_reply "$@") | \
+    ( _process_response_stream "Reply" 'reply' reply; trap - SIGINT)
 
   if [[ -n $BASH_VERSION ]]; then
     ret_code=${PIPESTATUS[0]}
@@ -406,12 +504,19 @@ _chat_once() {
     fi
     _print_response "Command" "$_command"
   else
+    local sigint_received=false
+    trap "sigint_received=true; echo" SIGINT
+
     exec 3>&1
     end_result=$(_query_and_process_command "$query")
     ret_code=$?
     exec 3>&-
 
-    if [[ $ret_code -ne 0 ]]; then
+    trap - SIGINT
+
+    if [[ $ret_code -eq $SIGINT_EXITCODE ]] || $sigint_received; then
+      return  # interrupted by user
+    elif [[ $ret_code -ne 0 ]]; then
       error="server not online"
     else
       error=$(echo -E "$end_result" | grep "^error=" | sed 's/^error=//')
@@ -434,16 +539,8 @@ _chat_once() {
 
   exec_command=false
   if [[ ${#_command} -gt 0 ]]; then
-    if [[ "$ASK_TERMINAL_USE_BLACKLIST" == "true" ]]; then
-      echo -E "$_command" | grep -qE "$ASK_TERMINAL_BLACKLIST_PATTERN"
-      if [[ $? -ne 0 ]]; then
-        exec_command=true
-      else
-        _confirm_command_execution
-        if [[ $? -eq 0 ]]; then
-          exec_command=true
-        fi
-      fi
+    if [[ "$ASK_TERMINAL_USE_BLACKLIST" == "true" ]] && ( echo -E "$_command" | grep -qE "$ASK_TERMINAL_BLACKLIST_PATTERN" ); then
+      exec_command=true
     else
       _confirm_command_execution
       if [[ $? -eq 0 ]]; then
@@ -488,6 +585,8 @@ _chat_once() {
     fi
 
     if $ASK_TERMINAL_USE_REPLY; then
+      trap "" SIGINT
+
       sleep 1  # wait for tail to display all contents
       if [[ -n $BASH_VERSION ]]; then
         { kill $display_job && wait $display_job; } 2>/dev/null
@@ -496,6 +595,8 @@ _chat_once() {
       fi
       observation=$(cat $memfile)
       rm $memfile
+
+      trap - SIGINT
     fi
 
     _print_message "Command finished" "" green
@@ -503,7 +604,10 @@ _chat_once() {
 
   if $ASK_TERMINAL_USE_REPLY; then
     if $ASK_TERMINAL_USE_CLARIFICATION && ! $exec_command && [[ ${#_command} -gt 0 ]]; then
-      _advance_read -p "Clarification: " observation
+      _advance_read observation -p "Clarification: "
+      if [[ $? -eq $SIGINT_EXITCODE ]]; then
+        return
+      fi
     fi
 
     if ! $ASK_TERMINAL_USE_STREAMING; then
@@ -518,12 +622,19 @@ _chat_once() {
       reply=$(echo -E "$result" | jq -r '.payload.reply')
       _print_response "Reply" "$reply"
     else
+      local sigint_received=false
+      trap "sigint_received=true; echo" SIGINT
+
       exec 3>&1
       end_result=$(_query_and_process_reply "$exec_command" "$observation")
       ret_code=$?
       exec 3>&-
 
-      if [[ $ret_code -ne 0 ]]; then
+      trap - SIGINT
+
+      if [[ $ret_code -eq $SIGINT_EXITCODE ]] || $sigint_received; then
+        return  # interrupted by user
+      elif [[ $ret_code -ne 0 ]]; then
         error="server not online"
       else
         error=$(echo -E "$end_result" | grep "^error=" | sed 's/^error=//')
@@ -586,11 +697,14 @@ ask-terminal() {
   else
     while true; do
       query=  # clear variable
-      _advance_read -p "> " query
-      if [[ $? -eq 1 ]]; then
-        # EOF
-        break
-      fi
+      _advance_read query -p "> "
+      ret_code=$?
+      case $ret_code in
+        0) ;;  # submit
+        $SIGINT_EXITCODE) continue;;  # SIGINT
+        1|*) break;;  # EOF
+      esac
+
       if [[ -n $query ]]; then
         _chat_once "$query"
         ret_code=$?
