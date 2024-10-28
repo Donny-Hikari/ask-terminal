@@ -132,7 +132,7 @@ _get_os_version() {
 }
 
 _get_env() {
-  local shell_name="${SHELL##*/}"
+  local shell_name="$(ps -p $$ -o comm=)"
   local os_version=$(_get_os_version | tr -s '\n' ' ' | xargs)
 
   echo "{ \
@@ -254,10 +254,13 @@ _curl_server() {
 _init_conversation() {
   local data="{"
   if [[ -n "$ASK_TERMINAL_ENDPOINT" ]]; then
-    data+="\"endpoint\": \"$ASK_TERMINAL_ENDPOINT\""
+    data+="\"endpoint\": \"$ASK_TERMINAL_ENDPOINT\","
   fi
   if [[ -n "$ASK_TERMINAL_MODEL" ]]; then
-    data+="\"model_name\": \"$ASK_TERMINAL_MODEL\""
+    data+="\"model_name\": \"$ASK_TERMINAL_MODEL\","
+  fi
+  if [[ ${data[@]:${#data}-1} == "," ]]; then
+    data="${data[@]:0:${#data}-1}"
   fi
   data+="}"
 
@@ -355,7 +358,7 @@ _process_response_stream() {
   local hint_printed=false
 
   local first_error_result=
-  local error=
+  local error=null
   local section=
   local finished=
   local content=
@@ -378,7 +381,7 @@ _process_response_stream() {
 
     if [[ "$error" != null ]]; then
       if [[ -z "$first_error_result" ]]; then
-       first_error_result="$line"
+        first_error_result="$line"
       fi
 
       continue  # consume the reminding streams
@@ -435,44 +438,14 @@ _process_response_stream() {
   echo -E "$var_name=$res" >&1
 }
 
-_bash3_2_sigint_passthrough() {
-  local parent_pid=$1
-  if [[ -n $BASH_VERSION ]] && ( ! _version_gt "$BASH_VERSION" "3.2" ); then
-    # kill the outer subshell; for bash 3.2 or earlier
-    trap "trap - SIGINT; kill -INT $parent_pid" SIGINT;
-  fi
-}
-
-_query_and_process_command() {
-  local ret_code=0
-
-  ( _bash3_2_sigint_passthrough $$; _query_command "$@" ) | \
-    _process_response_stream "Thought" 'thinking' thinking | \
-    ( _process_response_stream "Command" 'command' _command; trap - SIGINT )
-
-  if [[ -n $BASH_VERSION ]]; then
-    ret_code=${PIPESTATUS[0]}
-  elif [[ -n $ZSH_VERSION ]]; then
-    ret_code=${pipestatus[1]}
-  fi
-
-  return $ret_code
-}
-
-_query_and_process_reply() {
-  local ret_code=0
-
-  # kill the outer subshell; for bash 3.2 or earlier
-  ( _bash3_2_sigint_passthrough $$; _query_reply "$@") | \
-    ( _process_response_stream "Reply" 'reply' reply; trap - SIGINT)
-
-  if [[ -n $BASH_VERSION ]]; then
-    ret_code=${PIPESTATUS[0]}
-  elif [[ -n $ZSH_VERSION ]]; then
-    ret_code=${pipestatus[1]}
-  fi
-
-  return $ret_code
+_get_exec_status() {
+  local _exec_status=($1)
+  for e in ${_exec_status[@]}; do
+    if [[ $e -ne 0 ]]; then
+      return $e
+    fi
+  done
+  return 0
 }
 
 _chat_once() {
@@ -504,17 +477,25 @@ _chat_once() {
     fi
     _print_response "Command" "$_command"
   else
-    local sigint_received=false
-    trap "sigint_received=true; echo" SIGINT
+    trap "echo" SIGINT
 
     exec 3>&1
-    end_result=$(_query_and_process_command "$query")
+    end_result=$(
+      _query_command "$query" | \
+        _process_response_stream "Thought" 'thinking' thinking | \
+        _process_response_stream "Command" 'command' _command; \
+       _get_exec_status "${PIPESTATUS[@]}${pipestatus[@]}"
+    )
     ret_code=$?
     exec 3>&-
 
     trap - SIGINT
 
-    if [[ $ret_code -eq $SIGINT_EXITCODE ]] || $sigint_received; then
+    if [[ $ret_code -eq $SIGINT_EXITCODE ]]; then
+      if [[ -n $BASH_VERSION ]] && ( ! _version_gt "$BASH_VERSION" "3.2" ); then
+        # manually add a newline for bash 3.2 when interrupted
+        echo -ne $'\n'
+      fi
       return  # interrupted by user
     elif [[ $ret_code -ne 0 ]]; then
       error="server not online"
@@ -622,17 +603,24 @@ _chat_once() {
       reply=$(echo -E "$result" | jq -r '.payload.reply')
       _print_response "Reply" "$reply"
     else
-      local sigint_received=false
-      trap "sigint_received=true; echo" SIGINT
+      trap "echo" SIGINT
 
       exec 3>&1
-      end_result=$(_query_and_process_reply "$exec_command" "$observation")
+      end_result=$(
+        _query_reply "$exec_command" "$observation" | \
+          _process_response_stream "Reply" 'reply' reply; \
+          _get_exec_status "${PIPESTATUS[@]}${pipestatus[@]}"
+      )
       ret_code=$?
       exec 3>&-
 
       trap - SIGINT
 
-      if [[ $ret_code -eq $SIGINT_EXITCODE ]] || $sigint_received; then
+      if [[ $ret_code -eq $SIGINT_EXITCODE ]]; then
+        if [[ -n $BASH_VERSION ]] && ( ! _version_gt "$BASH_VERSION" "3.2" ); then
+          # manually add a newline for bash 3.2 when interrupted
+          echo -ne $'\n'
+        fi
         return  # interrupted by user
       elif [[ $ret_code -ne 0 ]]; then
         error="server not online"
