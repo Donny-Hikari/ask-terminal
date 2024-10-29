@@ -329,7 +329,8 @@ ASK_TERMINAL_BLACKLIST_PATTERN="\b(rm|sudo)\b"  # pattern to confirm before exec
 ASK_TERMINAL_USE_REPLY=true  # send the output of command to the server to get a reply
 ASK_TERMINAL_USE_STREAMING=true  # stream the output
 ASK_TERMINAL_USE_CLARIFICATION=true  # ask for clarification when refusing a command
-ASK_TERMINAL_REFUSED_COMMAND_HISTORY=true   # add commands to the history even if it gets refused
+ASK_TERMINAL_COMMAND_HISTORY=true   # add commands to the shell history
+ASK_TERMINAL_REFUSED_COMMAND_HISTORY=true   # add commands to the shell history even if it gets refused
 ```
 
 You may use `export ASK_TERMINAL_*=...` before hand or prepend the environment variables `ASK_TERMINAL_*=...` to the client `ask-terminal` (or `ask`) command to use them.

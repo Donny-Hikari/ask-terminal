@@ -14,4 +14,4 @@ RUN make install-client install-shell-rc
 
 ENV CLIENT_ENV=
 
-CMD ["bash", "-ic", "export ${CLIENT_ENV}; ask-terminal"]
+CMD ["bash", "-ic", "[[ -n $CLIENT_ENV ]] && export ${CLIENT_ENV}; ask-terminal"]

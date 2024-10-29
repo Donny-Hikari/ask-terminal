@@ -10,7 +10,8 @@ ASK_TERMINAL_BLACKLIST_PATTERN=${ASK_TERMINAL_BLACKLIST_PATTERN:-"\b(rm|sudo)\b"
 ASK_TERMINAL_USE_REPLY=${ASK_TERMINAL_USE_REPLY:-true}  # send the output of command to the server to get a reply
 ASK_TERMINAL_USE_STREAMING=${ASK_TERMINAL_USE_STREAMING:-true}  # stream the output
 ASK_TERMINAL_USE_CLARIFICATION=${ASK_TERMINAL_USE_CLARIFICATION:-true}  # ask for clarification when refusing a command
-ASK_TERMINAL_REFUSED_COMMAND_HISTORY=${ASK_TERMINAL_REFUSED_COMMAND_HISTORY:-true}   # add commands to the history even if it gets refused
+ASK_TERMINAL_COMMAND_HISTORY=${ASK_TERMINAL_COMMAND_HISTORY:-true}   # add commands to the shell history
+ASK_TERMINAL_REFUSED_COMMAND_HISTORY=${ASK_TERMINAL_REFUSED_COMMAND_HISTORY:-true}   # add commands to the shell history even if it gets refused
 
 # internal variables
 
@@ -530,7 +531,7 @@ _chat_once() {
     fi
   fi
 
-  if $exec_command || $ASK_TERMINAL_REFUSED_COMMAND_HISTORY; then
+  if $ASK_TERMINAL_COMMAND_HISTORY && ( $exec_command || $ASK_TERMINAL_REFUSED_COMMAND_HISTORY ); then
     if [[ -n $BASH_VERSION ]]; then
       history -s "$_command"
     elif [[ -n $ZSH_VERSION ]]; then
