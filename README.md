@@ -1,6 +1,8 @@
 # Ask-terminal
 
-Chat with your terminal and get things done using natural language with the help of LLM (Large Language Model).
+Get things done by asking your terminal to generate and execute complex commands for you, using just natural language (thanks to LLM).
+
+It works right in your shell, and the commands generated are still in your shell history for easy reference.
 
 ![Demo1](./demo/demo1.gif)
 
@@ -161,6 +163,10 @@ Some examples:
 3. Convert images or videos (ffmpeg is too hard for me):
 
 [![demo2.mp4](./demo/demo2.jpg)](https://github.com/user-attachments/assets/a8f922b4-2481-426f-a954-efbb4e94254b)
+
+4. Clone git repo and run:
+
+[![deme3.mp4](./demo/demo3.jpg)](https://github.com/user-attachments/assets/d58a0d4e-c466-418b-9268-cf65836f8d5d)
 
 ### Interactive Mode
 
