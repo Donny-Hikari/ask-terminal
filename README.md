@@ -2,7 +2,7 @@
 
 Get things done by asking your terminal to generate and execute complex commands for you, using just natural language (thanks to LLM).
 
-It works right in your shell, and the commands generated are still in your shell history for easy reference.
+It works right in your shell, and the commands generated are in your shell history for easy reference.
 
 ![Demo1](./demo/demo1.gif)
 
@@ -35,6 +35,14 @@ Reply> The program using the most cpu resource is "ollama_llama_se". Its pid and
 ```
 
 ## Installation
+
+There are three ways to install `ask-terminal`:
+
+- [Run Server in Docker, and Client Locally](#run-server-in-docker-and-client-locally)
+- [Full Local Setup](#full-local-setup)
+- [Run Client in Docker](#run-client-in-docker)
+
+It is recommended to use *Run Server in Docker, and Client Locally* method. But if you don't have docker installed, you can use *Full Local Setup* method.
 
 ### Run Server in Docker, and Client Locally
 
@@ -71,15 +79,15 @@ alias ask=ask-terminal
 
 Start a new terminal, and run `ask-terminal` or `ask`. Enjoy!
 
-> **Note:** You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
+> **Note:** You may use other text completion endpoints, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
 > **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `ASK_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
 >
 > It is recommended to use a local endpoint instead, such as [Ollama](#ollama) or [Llama-cpp](#llama-cpp).
 
-### Local Setup
+### Full Local Setup
 
-First setup with this command:
+First install the server and the client with this command:
 
 ```shell
 $ make setup
@@ -110,6 +118,8 @@ alias ask=ask-terminal
 
 Start a new terminal, and run `ask-terminal` or `ask`. Enjoy!
 
+Refer to [Start Ask-terminal Server at Startup (Locally)](#start-ask-terminal-server-at-startup-locally) if you want to run the server at startup.
+
 > **Note:** You may use other text completion endpoints other than `openai`, such as `llama-cpp`, `ollama`, `anthropic`, etc. See [Text Completion Endpoint](#text-completion-endpoint) for more information.
 
 > **Note:** If you use online API endpoints such as `OpenAI` and `Anthropic`, and want to prevent sending the output of your commands to the server, you can set the environment variable `ASK_TERMINAL_USE_REPLY=false` in your client to turn off the replying-to-result feature.
@@ -118,7 +128,7 @@ Start a new terminal, and run `ask-terminal` or `ask`. Enjoy!
 
 ### Run Client in Docker
 
-You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Ask-terminal - to help you find and execute commands in your environment. Therefore this method mainly for test purpose.
+You may run the client in docker as well. This can help prevent unwanted command execution on your local machine, but at the cost of not having accces to your local environment and hinder the purpose of Ask-terminal - to help you find and execute commands in your environment. Therefore this method is mainly for test purpose.
 
 ```shell
 $ make docker-run-client CLIENT_ENV=ASK_TERMINAL_USE_BLACKLIST=true
@@ -228,7 +238,7 @@ $ ask-terminal-reset
 
 The next time you start `ask-terminal`, it will create a new conversation session.
 
-> **Note:** Some client environment variables required a `ask-terminal-reset` to be applied, such as `ASK_TERMINAL_ENDPOINT` and `ASK_TERMINAL_MODEL`.
+> **Note:** Some client environment variables require a `ask-terminal-reset` to take effect, such as `ASK_TERMINAL_ENDPOINT` and `ASK_TERMINAL_MODEL`.
 
 ## Text Completion Endpoints
 
